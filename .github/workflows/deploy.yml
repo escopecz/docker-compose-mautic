@@ -1,0 +1,52 @@
+name: Deploy to DigitalOcean
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Install doctl
+      uses: digitalocean/action-doctl@v2
+      with:
+        token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+    - name: Create VPC if it doesn't exist
+      run: |
+        if ! doctl vpcs list | grep -q 'mautic-vps'; then
+            doctl compute droplet create mautic-vps --image docker-25-00 --size s-1vcpu-1gb --region nyc1 --ssh-keys main --wait --user-data-file setup.sh
+        fi
+
+    - name: Execute setup.sh
+      run: |
+        chmod +x setup.sh
+        ./setup.sh
+
+    - name: Login to GitHub Packages
+      uses: docker/login-action@v1
+      with:
+        registry: docker.pkg.github.com
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v2
+      with:
+        context: .
+        push: true
+        tags: docker.pkg.github.com/${{ github.repository }}/user/app:latest
+
+    - name: Deploy Docker Compose app
+      run: |
+        # Pull the newly built image
+        doctl compute ssh mautic-vps -- docker pull docker.pkg.github.com/${{ github.repository }}/user/app:latest
+
+        # Run the new version of the app
+        doctl compute ssh mautic-vps -- docker-compose up -d

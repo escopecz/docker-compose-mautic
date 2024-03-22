@@ -32,9 +32,8 @@ services:
     links:
       - db:mysql
     ports:
-      - 8001:80
+      - ${MAUTIC_PORT:-8001}:80
     volumes: *mautic-volumes
-
     environment:
       - DOCKER_MAUTIC_LOAD_TEST_DATA=${DOCKER_MAUTIC_LOAD_TEST_DATA}
       - DOCKER_MAUTIC_RUN_MIGRATIONS=${DOCKER_MAUTIC_RUN_MIGRATIONS}
