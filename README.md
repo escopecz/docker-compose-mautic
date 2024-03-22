@@ -46,6 +46,8 @@ In this example we are going for the cheepest option for $6/month. The caviat is
 - `DIGITALOCEAN_ACCESS_TOKEN`
 - https://cloud.digitalocean.com/account/security
 - `DIGITALOCEAN_SSH_FINGERPRINT`
+- https://github.com/settings/tokens/new
+- `PACKAGE_GITHUB_TOKEN`
 - https://github.com/escopecz/docker-compose-mautic/settings/secrets/actions
 
 
