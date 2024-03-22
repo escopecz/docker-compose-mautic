@@ -41,7 +41,7 @@ In this example we are going for the cheepest option for $6/month. The caviat is
 14. `docker compose ps`
 15. `docker compose exec -u www-data -w /var/www/html mautic_web php ./bin/console`
 
-## Setup Github Actions
+## Setup Github Actions Secrets
 - https://cloud.digitalocean.com/account/api/tokens
 - `DIGITALOCEAN_ACCESS_TOKEN`
 - https://cloud.digitalocean.com/account/security

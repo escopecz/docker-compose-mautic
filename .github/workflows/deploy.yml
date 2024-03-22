@@ -24,11 +24,6 @@ jobs:
             doctl compute droplet create mautic-vps --image docker-20-04 --size s-1vcpu-1gb --region nyc1 --ssh-keys ${{ secrets.DIGITALOCEAN_SSH_FINGERPRINT }} --wait --user-data-file setup.sh
         fi
 
-    - name: Execute setup.sh
-      run: |
-        chmod +x setup.sh
-        ./setup.sh
-
     - name: Login to GitHub Packages
       uses: docker/login-action@v1
       with:
