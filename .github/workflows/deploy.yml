@@ -21,7 +21,7 @@ jobs:
     - name: Create VPC if it doesn't exist
       run: |
         if ! doctl compute droplet list | grep -q 'mautic-vps'; then
-          doctl compute droplet create mautic-vps --image docker-20-04 --size s-1vcpu-1gb --region nyc1 --ssh-keys ${{ secrets.DIGITALOCEAN_SSH_FINGERPRINT }} --wait --user-data-file setup.sh
+            doctl compute droplet create mautic-vps --image docker-20-04 --size s-1vcpu-2gb --region nyc1 --ssh-keys ${{ secrets.DIGITALOCEAN_SSH_FINGERPRINT }} --wait --user-data-file setup.sh --enable-monitoring --enable-alerts
         else
           echo "Droplet 'mautic-vps' already exists."
         fi
