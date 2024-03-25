@@ -63,7 +63,7 @@ jobs:
       run: |
         # Pull the newly built image
         # doctl compute ssh mautic-vps -- docker pull docker.pkg.github.com/${{ github.repository }}/user/app:latest
-        ssh -o StrictHostKeyChecking=no -i $HOME/.ssh/id_rsa user@${{ env.ip }} "docker pull docker.pkg.github.com/${{ github.repository }}/user/app:latest"
+        ssh -o StrictHostKeyChecking=no -i $HOME/.ssh/id_rsa root@${{ env.ip }} "docker pull docker.pkg.github.com/${{ github.repository }}/user/app:latest"
 
         # Run the new version of the app
         # doctl compute ssh mautic-vps -- docker-compose up -d
