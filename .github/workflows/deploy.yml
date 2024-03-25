@@ -32,19 +32,18 @@ jobs:
     - name: Get Droplet IP
       id: get-droplet-ip
       run: |
-        echo "Droplet IP: $(doctl compute droplet get mautic-vps --format PublicIPv4 --no-header)"
         echo "ip=$(doctl compute droplet get mautic-vps --format PublicIPv4 --no-header)" >> $GITHUB_ENV
 
     - name: Setup SSH Key
       if: env.droplet_created == 'true'
       run: |
-        mkdir -p ~/.ssh/
-        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-        chmod 700 ~/.ssh/
-        chmod 600 ~/.ssh/id_rsa
+        mkdir -p $HOME/.ssh/
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > $HOME/.ssh/id_rsa
+        chmod 700 $HOME/.ssh/
+        chmod 600 $HOME/.ssh/id_rsa
         ssh-keygen -R ${{ env.ip }} || true
-        ssh-keyscan -H ${{ env.ip }} >> ~/.ssh/known_hosts
-        chmod 600 ~/.ssh/known_hosts
+        ssh-keyscan -H ${{ env.ip }} >> $HOME/.ssh/known_hosts
+        chmod 600 $HOME/.ssh/known_hosts
 
     - name: Login to GitHub Packages
       uses: docker/login-action@v3
