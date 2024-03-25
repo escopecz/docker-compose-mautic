@@ -34,19 +34,19 @@ jobs:
       run: |
         echo "ip=$(doctl compute droplet get mautic-vps --format PublicIPv4 --no-header)" >> $GITHUB_ENV
 
-    - name: Login to GitHub Packages
-      uses: docker/login-action@v3
-      with:
-        registry: docker.pkg.github.com
-        username: ${{ github.repository_owner }}
-        password: ${{ secrets.PACKAGE_GITHUB_TOKEN }}
+    # - name: Login to GitHub Packages
+    #   uses: docker/login-action@v3
+    #   with:
+    #     registry: docker.pkg.github.com
+    #     username: ${{ github.repository_owner }}
+    #     password: ${{ secrets.PACKAGE_GITHUB_TOKEN }}
 
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        push: true
-        tags: docker.pkg.github.com/${{ github.repository }}/user/app:latest
+    # - name: Build and push Docker image
+    #   uses: docker/build-push-action@v5
+    #   with:
+    #     context: .
+    #     push: true
+    #     tags: docker.pkg.github.com/${{ github.repository }}/user/app:latest
 
     - name: Deploy to Server
       uses: easingthemes/ssh-deploy@main
@@ -63,5 +63,4 @@ jobs:
           cd /var/www/
           pwd
           ls -la
-          export PRIVATE_MAUTIC_IMAGE="docker.pkg.github.com/${{ github.repository }}/user/app:latest"
           docker compose up -d
