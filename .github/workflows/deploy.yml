@@ -34,30 +34,19 @@ jobs:
       run: |
         echo "ip=$(doctl compute droplet get mautic-vps --format PublicIPv4 --no-header)" >> $GITHUB_ENV
 
-    # - name: Setup SSH Key
-    #   if: env.droplet_created == 'true'
-    #   run: |
-    #     mkdir -p $HOME/.ssh/
-    #     echo "${{ secrets.SSH_PRIVATE_KEY }}" > $HOME/.ssh/id_rsa
-    #     chmod 700 $HOME/.ssh/
-    #     chmod 600 $HOME/.ssh/id_rsa
-    #     ssh-keygen -R ${{ env.ip }} || true
-    #     ssh-keyscan -H ${{ env.ip }} >> $HOME/.ssh/known_hosts
-    #     chmod 600 $HOME/.ssh/known_hosts
+    # - name: Login to GitHub Packages
+    #   uses: docker/login-action@v3
+    #   with:
+    #     registry: docker.pkg.github.com
+    #     username: ${{ github.repository_owner }}
+    #     password: ${{ secrets.PACKAGE_GITHUB_TOKEN }}
 
-    - name: Login to GitHub Packages
-      uses: docker/login-action@v3
-      with:
-        registry: docker.pkg.github.com
-        username: ${{ github.repository_owner }}
-        password: ${{ secrets.PACKAGE_GITHUB_TOKEN }}
-
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        push: true
-        tags: docker.pkg.github.com/${{ github.repository }}/user/app:latest
+    # - name: Build and push Docker image
+    #   uses: docker/build-push-action@v5
+    #   with:
+    #     context: .
+    #     push: true
+    #     tags: docker.pkg.github.com/${{ github.repository }}/user/app:latest
 
     - name: Deploy to Server
       uses: easingthemes/ssh-deploy@main
@@ -67,16 +56,12 @@ jobs:
         SOURCE: "dist/"
         REMOTE_HOST: ${{ env.ip }}
         REMOTE_USER: root
-        TARGET: ${{ secrets.REMOTE_TARGET }}
-
-    # - name: Deploy Docker Compose app
-    #   run: |
-    #     # Pull the newly built image
-    #     # doctl compute ssh mautic-vps -- docker pull docker.pkg.github.com/${{ github.repository }}/user/app:latest
-    #     ssh -o StrictHostKeyChecking=no -i $HOME/.ssh/id_rsa root@${{ env.ip }} "docker pull docker.pkg.github.com/${{ github.repository }}/user/app:latest"
-
-    #     # Run the new version of the app
-    #     # doctl compute ssh mautic-vps -- docker-compose up -d
-
-    #     push repo to VPS
-    #     docker composer up -d
+        TARGET: /var/www/
+        SCRIPT_BEFORE: |
+          whoami
+          ls -al
+        SCRIPT_AFTER: |
+          whoami
+          ls -al
+          echo $RSYNC_STDOUT
+          docker composer up -d
