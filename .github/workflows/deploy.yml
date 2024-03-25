@@ -11,7 +11,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Install doctl
       uses: digitalocean/action-doctl@v2
@@ -34,19 +34,19 @@ jobs:
       run: |
         echo "ip=$(doctl compute droplet get mautic-vps --format PublicIPv4 --no-header)" >> $GITHUB_ENV
 
-    # - name: Login to GitHub Packages
-    #   uses: docker/login-action@v3
-    #   with:
-    #     registry: docker.pkg.github.com
-    #     username: ${{ github.repository_owner }}
-    #     password: ${{ secrets.PACKAGE_GITHUB_TOKEN }}
+    - name: Login to GitHub Packages
+      uses: docker/login-action@v3
+      with:
+        registry: docker.pkg.github.com
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.PACKAGE_GITHUB_TOKEN }}
 
-    # - name: Build and push Docker image
-    #   uses: docker/build-push-action@v5
-    #   with:
-    #     context: .
-    #     push: true
-    #     tags: docker.pkg.github.com/${{ github.repository }}/user/app:latest
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: docker.pkg.github.com/${{ github.repository }}/user/app:latest
 
     - name: Deploy to Server
       uses: easingthemes/ssh-deploy@main
@@ -58,10 +58,6 @@ jobs:
         REMOTE_USER: root
         TARGET: /var/www/
         SCRIPT_BEFORE: |
-          whoami
-          ls -al
         SCRIPT_AFTER: |
-          whoami
-          ls -al
           echo $RSYNC_STDOUT
-          docker composer up -d
+          docker compose up -d
