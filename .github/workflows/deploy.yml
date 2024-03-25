@@ -59,11 +59,24 @@ jobs:
         push: true
         tags: docker.pkg.github.com/${{ github.repository }}/user/app:latest
 
-    - name: Deploy Docker Compose app
-      run: |
-        # Pull the newly built image
-        # doctl compute ssh mautic-vps -- docker pull docker.pkg.github.com/${{ github.repository }}/user/app:latest
-        ssh -o StrictHostKeyChecking=no -i $HOME/.ssh/id_rsa root@${{ env.ip }} "docker pull docker.pkg.github.com/${{ github.repository }}/user/app:latest"
+    - name: Deploy to Server
+      uses: easingthemes/ssh-deploy@main
+      with:
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        ARGS: "-rlgoDzvc -i --delete"
+        SOURCE: "dist/"
+        REMOTE_HOST: ${{ env.ip }}
+        REMOTE_USER: root
+        TARGET: ${{ secrets.REMOTE_TARGET }}
 
-        # Run the new version of the app
-        # doctl compute ssh mautic-vps -- docker-compose up -d
+    # - name: Deploy Docker Compose app
+    #   run: |
+    #     # Pull the newly built image
+    #     # doctl compute ssh mautic-vps -- docker pull docker.pkg.github.com/${{ github.repository }}/user/app:latest
+    #     ssh -o StrictHostKeyChecking=no -i $HOME/.ssh/id_rsa root@${{ env.ip }} "docker pull docker.pkg.github.com/${{ github.repository }}/user/app:latest"
+
+    #     # Run the new version of the app
+    #     # doctl compute ssh mautic-vps -- docker-compose up -d
+
+    #     push repo to VPS
+    #     docker composer up -d
