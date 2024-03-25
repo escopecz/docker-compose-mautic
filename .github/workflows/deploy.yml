@@ -36,7 +36,7 @@ jobs:
         echo "ip=$(doctl compute droplet get mautic-vps --format PublicIPv4 --no-header)" >> $GITHUB_ENV
 
     - name: Setup SSH Key
-      if: steps.create-vps.outputs.droplet_created == 'true'
+      if: env.droplet_created == 'true'
       run: |
         mkdir -p ~/.ssh/
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
