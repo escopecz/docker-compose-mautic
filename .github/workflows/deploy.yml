@@ -57,7 +57,6 @@ jobs:
         REMOTE_HOST: ${{ env.ip }}
         REMOTE_USER: root
         TARGET: /var/www/
-        SCRIPT_BEFORE: |
         SCRIPT_AFTER: |
           echo $RSYNC_STDOUT
           docker compose up -d
