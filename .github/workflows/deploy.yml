@@ -53,7 +53,7 @@ jobs:
       with:
         SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         ARGS: "-rlgoDzvc -i --delete"
-        SOURCE: "dist/"
+        SOURCE: "."
         REMOTE_HOST: ${{ env.ip }}
         REMOTE_USER: root
         TARGET: /var/www/
