@@ -22,20 +22,25 @@ jobs:
       id: create-vps
       run: |
         if ! doctl compute droplet list | grep -q 'mautic-vps'; then
-            doctl compute droplet create mautic-vps --image docker-20-04 --size s-1vcpu-1gb --region nyc1 --ssh-keys ${{ secrets.DIGITALOCEAN_SSH_FINGERPRINT }} --wait --user-data-file setup.sh --enable-monitoring
+          doctl compute droplet create mautic-vps --image docker-20-04 --size s-1vcpu-1gb --region nyc1 --ssh-keys ${{ secrets.DIGITALOCEAN_SSH_FINGERPRINT }} --wait --user-data-file setup.sh --enable-monitoring
+          echo "droplet_created=true" >> $GITHUB_ENV
         else
           echo "Droplet 'mautic-vps' already exists."
+          echo "droplet_created=true" >> $GITHUB_ENV
         fi
 
     - name: Get Droplet IP
       id: get-droplet-ip
       run: |
-        echo "::set-output name=ip::$(doctl compute droplet get mautic-vps --format PublicIPv4 --no-header)"
+        echo "Droplet IP: $(doctl compute droplet get mautic-vps --format PublicIPv4 --no-header)"
+        echo "ip=$(doctl compute droplet get mautic-vps --format PublicIPv4 --no-header)" >> $GITHUB_ENV
 
     - name: Setup SSH Key
+      if: steps.create-vps.outputs.droplet_created == 'true'
       run: |
         mkdir -p ~/.ssh/
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 700 ~/.ssh/
         chmod 600 ~/.ssh/id_rsa
         ssh-keyscan -H ${{ steps.get-droplet-ip.outputs.ip }} >> ~/.ssh/known_hosts
 
