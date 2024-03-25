@@ -18,13 +18,26 @@ jobs:
       with:
         token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
 
-    - name: Create VPC if it doesn't exist
+    - name: Create VPS if it doesn't exist
+      id: create-vps
       run: |
         if ! doctl compute droplet list | grep -q 'mautic-vps'; then
             doctl compute droplet create mautic-vps --image docker-20-04 --size s-1vcpu-2gb --region nyc1 --ssh-keys ${{ secrets.DIGITALOCEAN_SSH_FINGERPRINT }} --wait --user-data-file setup.sh --enable-monitoring --enable-alerts
         else
           echo "Droplet 'mautic-vps' already exists."
         fi
+
+    - name: Get Droplet IP
+      id: get-droplet-ip
+      run: |
+        echo "::set-output name=ip::$(doctl compute droplet get mautic-vps --format PublicIPv4 --no-header)"
+
+    - name: Setup SSH Key
+      run: |
+        mkdir -p ~/.ssh/
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H ${{ steps.get-droplet-ip.outputs.ip }} >> ~/.ssh/known_hosts
 
     - name: Login to GitHub Packages
       uses: docker/login-action@v3
