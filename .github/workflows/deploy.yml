@@ -60,6 +60,7 @@ jobs:
         EXCLUDE: ".git"
         SCRIPT_AFTER: |
           echo $RSYNC_STDOUT
+          cd /var/www/
           pwd
           ls -la
           docker compose up -d
