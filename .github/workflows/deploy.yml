@@ -63,4 +63,5 @@ jobs:
           cd /var/www/
           pwd
           ls -la
+          export PRIVATE_MAUTIC_IMAGE="docker.pkg.github.com/${{ github.repository }}/user/app:latest"
           docker compose up -d
