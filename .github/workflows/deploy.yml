@@ -32,7 +32,12 @@ jobs:
     - name: Get Droplet IP
       id: get-droplet-ip
       run: |
-        echo "ip=$(doctl compute droplet get mautic-vps --format PublicIPv4 --no-header)" >> $GITHUB_ENV
+        while [ -z "$IP" ]; do
+          echo "Waiting for droplet to be ready..."
+          sleep 5
+          IP=$(doctl compute droplet get mautic-vps --format PublicIPv4 --no-header)
+        done
+        echo "ip=$IP" >> $GITHUB_ENV
 
     # - name: Login to GitHub Packages
     #   uses: docker/login-action@v3
