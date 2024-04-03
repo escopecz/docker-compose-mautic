@@ -1,0 +1,19 @@
+server {
+    listen 80;
+    server_name DOMAIN_NAME;
+
+    location / {
+        proxy_pass http://localhost:PORT;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location ~ /\.ht {
+        deny all;
+    }
+
+    error_log /var/log/nginx/DOMAIN_NAME_error.log;
+    access_log /var/log/nginx/DOMAIN_NAME_access.log;
+}

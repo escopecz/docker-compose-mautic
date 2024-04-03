@@ -19,7 +19,6 @@ jobs:
         token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
 
     - name: Create VPS if it doesn't exist
-      id: create-vps
       run: |
         if ! doctl compute droplet list | grep -q 'mautic-vps'; then
           doctl compute droplet create mautic-vps --image docker-20-04 --size s-1vcpu-1gb --region nyc1 --ssh-keys ${{ secrets.DIGITALOCEAN_SSH_FINGERPRINT }} --wait --user-data-file setup.sh --enable-monitoring
@@ -29,8 +28,7 @@ jobs:
           echo "droplet_created=true" >> $GITHUB_ENV
         fi
 
-    - name: Get Droplet IP
-      id: get-droplet-ip
+    - name: Get VPS IP
       run: |
         while [ -z "$IP" ]; do
           echo "Waiting for droplet to be ready..."
@@ -38,20 +36,6 @@ jobs:
           IP=$(doctl compute droplet get mautic-vps --format PublicIPv4 --no-header)
         done
         echo "ip=$IP" >> $GITHUB_ENV
-
-    # - name: Login to GitHub Packages
-    #   uses: docker/login-action@v3
-    #   with:
-    #     registry: docker.pkg.github.com
-    #     username: ${{ github.repository_owner }}
-    #     password: ${{ secrets.PACKAGE_GITHUB_TOKEN }}
-
-    # - name: Build and push Docker image
-    #   uses: docker/build-push-action@v5
-    #   with:
-    #     context: .
-    #     push: true
-    #     tags: docker.pkg.github.com/${{ github.repository }}/user/app:latest
 
     - name: Deploy to Server
       uses: easingthemes/ssh-deploy@main
@@ -61,11 +45,16 @@ jobs:
         SOURCE: "."
         REMOTE_HOST: ${{ env.ip }}
         REMOTE_USER: root
-        TARGET: /var/www/
+        TARGET: /var/www/${{ github.repository }}
         EXCLUDE: ".git"
         SCRIPT_AFTER: |
           echo $RSYNC_STDOUT
-          cd /var/www/
+          cd /var/www/${{ github.repository }}
           pwd
           ls -la
           docker compose up -d
+          mv nginx-virtual-host ./${{ env.DOMAIN_NAME }}
+          sed -i '' 's/DOMAIN_NAME/${{ env.DOMAIN_NAME }}/g; s/PORT/${{ env.MAUTIC_PORT || '8001' }}/g' ${{ env.DOMAIN_NAME }}
+          sudo ln -s ${{ env.DOMAIN_NAME }} /etc/nginx/sites-enabled/
+          nginx -t && nginx -s reload
+          sudo certbot --nginx -d {{ env.DOMAIN_NAME }} --non-interactive --agree-tos --email ${{ env.EMAIL }}
