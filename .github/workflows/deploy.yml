@@ -45,7 +45,7 @@ jobs:
         SOURCE: "."
         REMOTE_HOST: ${{ env.ip }}
         REMOTE_USER: root
-        TARGET: /var/www/${{ github.repository }}
+        TARGET: /var/www/${{ github.repository }}/
         EXCLUDE: ".git"
         SCRIPT_AFTER: |
           echo $RSYNC_STDOUT
