@@ -30,10 +30,16 @@ jobs:
 
     - name: Get VPS IP
       run: |
-        while [ -z "$IP" ]; do
+        while : ; do
           echo "Waiting for droplet to be ready..."
           sleep 5
-          IP=$(doctl compute droplet get mautic-vps --format PublicIPv4 --no-header)
+          STATUS=$(doctl compute droplet get mautic-vps --format Status --no-header)
+          if [ "$STATUS" = "active" ]; then
+            IP=$(doctl compute droplet get mautic-vps --format PublicIPv4 --no-header)
+            if [ -n "$IP" ]; then
+              break
+            fi
+          fi
         done
         echo "ip=$IP" >> $GITHUB_ENV
 
