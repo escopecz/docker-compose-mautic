@@ -54,7 +54,7 @@ jobs:
         TARGET: /var/www/${{ github.repository }}
         EXCLUDE: ".git"
         SCRIPT_BEFORE: |
-          mkdir /var/www/${{ github.repository }}
+          mkdir -p /var/www/${{ github.repository }}
         SCRIPT_AFTER: |
           echo $RSYNC_STDOUT
           cd /var/www/${{ github.repository }}
