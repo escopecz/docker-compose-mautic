@@ -38,6 +38,7 @@ jobs:
           if [ "$STATUS" = "active" ]; then
             IP=$(doctl compute droplet get mautic-vps --format PublicIPv4 --no-header)
             if [ -n "$IP" ]; then
+              echo "Droplet is active. IP address: $IP"
               break
             fi
           fi
@@ -65,13 +66,13 @@ jobs:
         SOURCE: "."
         REMOTE_HOST: ${{ env.ip }}
         REMOTE_USER: root
-        TARGET: /var/www/${{ github.repository }}
+        TARGET: /var/www
         EXCLUDE: ".git"
         SCRIPT_BEFORE: |
-          mkdir -p /var/www/${{ github.repository }}
+          mkdir -p /var/www
         SCRIPT_AFTER: |
           echo $RSYNC_STDOUT
-          cd /var/www/${{ github.repository }}
+          cd /var/www
           pwd
           ls -la
           docker compose up -d
