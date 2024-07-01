@@ -60,6 +60,10 @@ jobs:
 
     - name: Deploy to Server
       uses: easingthemes/ssh-deploy@main
+      env:
+        DOMAIN_NAME: ${{ env.DOMAIN_NAME }}
+        MAUTIC_PORT: ${{ env.MAUTIC_PORT }}
+        EMAIL: ${{ env.EMAIL }}
       with:
         SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         ARGS: "-rlgoDzvc --delete"
@@ -76,8 +80,8 @@ jobs:
           pwd
           ls -la
           docker compose up -d
-          mv nginx-virtual-host ./${{ env.DOMAIN_NAME }}
-          sed -i '' 's/DOMAIN_NAME/${{ env.DOMAIN_NAME }}/g; s/PORT/${{ env.MAUTIC_PORT || '8001' }}/g' ${{ env.DOMAIN_NAME }}
-          sudo ln -s ${{ env.DOMAIN_NAME }} /etc/nginx/sites-enabled/
+          mv nginx-virtual-host ./$DOMAIN_NAME
+          sed -i '' 's/DOMAIN_NAME/'"$DOMAIN_NAME"'/g; s/PORT/'"${MAUTIC_PORT:-8001}"'/g' $DOMAIN_NAME
+          sudo ln -s $DOMAIN_NAME /etc/nginx/sites-enabled/
           nginx -t && nginx -s reload
-          sudo certbot --nginx -d {{ env.DOMAIN_NAME }} --non-interactive --agree-tos --email ${{ env.EMAIL }}
+          sudo certbot --nginx -d $DOMAIN_NAME --non-interactive --agree-tos --email $EMAIL
