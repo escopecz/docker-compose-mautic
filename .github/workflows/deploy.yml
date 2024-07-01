@@ -30,9 +30,10 @@ jobs:
 
     - name: Get VPS IP
       run: |
+        echo "Waiting for droplet to be ready..."
         while : ; do
-          echo "Waiting for droplet to be ready..."
-          sleep 5
+          echo "."
+          sleep 2
           STATUS=$(doctl compute droplet get mautic-vps --format Status --no-header)
           if [ "$STATUS" = "active" ]; then
             IP=$(doctl compute droplet get mautic-vps --format PublicIPv4 --no-header)
@@ -42,6 +43,19 @@ jobs:
           fi
         done
         echo "ip=$IP" >> $GITHUB_ENV
+
+    - name: Wait for server to be accessible
+      run: |
+        echo "Waiting for server at ${{ env.ip }} to be accessible..."
+        while : ; do
+          if nc -z ${{ env.ip }} 22; then
+            echo "Server is up and accessible."
+            break
+          else
+            echo "."
+            sleep 2
+          fi
+        done
 
     - name: Deploy to Server
       uses: easingthemes/ssh-deploy@main
