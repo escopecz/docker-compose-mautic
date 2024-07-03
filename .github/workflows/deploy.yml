@@ -60,10 +60,6 @@ jobs:
 
     - name: Deploy to Server
       uses: easingthemes/ssh-deploy@main
-      env:
-        DOMAIN_NAME: ${{ env.DOMAIN_NAME }}
-        MAUTIC_PORT: ${{ env.MAUTIC_PORT }}
-        EMAIL: ${{ env.EMAIL }}
       with:
         SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         ARGS: "-rlgoDzvc --delete"
