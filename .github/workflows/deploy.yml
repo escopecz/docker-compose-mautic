@@ -76,4 +76,6 @@ jobs:
           pwd
           ls -la
           docker compose up -d
-
+          docker stop basic-mautic_worker-1 # avoiding https://github.com/mautic/docker-mautic/issues/270
+          docker exec -u www-data -w /var/www/html basic-mautic_web-1 php ./bin/console mautic:install --force --admin_email willchange@mautic.org --admin_password MauticR0cks! http://157.230.80.20:8001
+          docker start basic-mautic_worker-1
