@@ -32,7 +32,7 @@ services:
     links:
       - db:mysql
     ports:
-      - ${MAUTIC_PORT:-80}:80
+      - ${MAUTIC_PORT:-8001}:80
     volumes: *mautic-volumes
     environment:
       - DOCKER_MAUTIC_LOAD_TEST_DATA=${DOCKER_MAUTIC_LOAD_TEST_DATA}
