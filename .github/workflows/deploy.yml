@@ -80,8 +80,4 @@ jobs:
           pwd
           ls -la
           docker compose up -d
-          mv nginx-virtual-host ./$DOMAIN_NAME
-          sed -i '' 's/DOMAIN_NAME/'"$DOMAIN_NAME"'/g; s/PORT/'"${MAUTIC_PORT:-8001}"'/g' $DOMAIN_NAME
-          sudo ln -s $DOMAIN_NAME /etc/nginx/sites-enabled/
-          nginx -t && nginx -s reload
-          sudo certbot --nginx -d $DOMAIN_NAME --non-interactive --agree-tos --email $EMAIL
+

@@ -15,4 +15,4 @@ sudo ufw allow 443
 
 # Install Nginx
 sudo apt-get update
-sudo apt-get install -y nginx certbot python3-certbot-nginx vim
+sudo apt-get install -y nginx certbot python3-certbot-nginx vim nano
