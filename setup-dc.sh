@@ -3,8 +3,9 @@ docker compose up -d mautic_web
 
 echo "## Wait for basic-mautic_web-1 container to be fully running"
 
-while ! docker compose ps mautic_web | grep -q "Up"; do
-    echo "Waiting for mautic_web to be fully running..."
+while ! docker compose ps mautic_web | tee /tmp/docker_ps_output.txt | grep -q "Up"; do
+    echo "### Waiting for mautic_web to be fully running..."
+    cat /tmp/docker_ps_output.txt
     sleep 2
 done
 
