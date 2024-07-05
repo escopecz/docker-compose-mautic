@@ -1,5 +1,5 @@
 # Build stage:
-FROM mautic/mautic:5.0.3-apache AS build
+FROM mautic/mautic:5.1.0-apache AS build
 
 # Install dependencies needed for Composer to run and rebuild assets:
 RUN apt-get update && apt-get install -y git curl npm && rm -rf /var/lib/apt/lists/*
@@ -12,7 +12,7 @@ RUN cd /var/www/html && \
     COMPOSER_ALLOW_SUPERUSER=1 COMPOSER_PROCESS_TIMEOUT=10000  vendor/bin/composer require chimpino/theme-air:^1.0 --no-scripts --no-interaction
 
 # Production stage:
-FROM mautic/mautic:5.0.3-apache
+FROM mautic/mautic:5.1.0-apache
 
 # Copy the built assets and the Mautic installation from the build stage:
 COPY --from=build --chown=www-data:www-data /var/www/html /var/www/html
