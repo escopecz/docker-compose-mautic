@@ -21,7 +21,7 @@ jobs:
     - name: Create VPS if it doesn't exist
       run: |
         if ! doctl compute droplet list | grep -q 'mautic-vps'; then
-          doctl compute droplet create mautic-vps --image docker-20-04 --size s-1vcpu-1gb --region nyc1 --ssh-keys ${{ secrets.DIGITALOCEAN_SSH_FINGERPRINT }} --wait --user-data-file setup.sh --enable-monitoring
+          doctl compute droplet create mautic-vps --image docker-20-04 --size s-1vcpu-1gb --region nyc1 --ssh-keys ${{ secrets.DIGITALOCEAN_SSH_FINGERPRINT }} --wait --user-data-file setup-vps.sh --enable-monitoring
           echo "droplet_created=true" >> $GITHUB_ENV
         else
           echo "Droplet 'mautic-vps' already exists."
@@ -68,7 +68,12 @@ jobs:
         REMOTE_USER: root
         TARGET: /var/www
         EXCLUDE: ".git"
-        SCRIPT_BEFORE: |
-          mkdir -p /var/www
-        SCRIPT_AFTER: |
-          ./run.sh
+        SCRIPT_BEFORE: mkdir -p /var/www
+        SCRIPT_AFTER: /var/www/setup-dc.sh
+
+    - name: Open your Mautic instance
+      run: |
+        set -a
+        source .mautic_env
+        set +a
+        echo "You can visit the Mautic installation at http://${{ env.ip }}:${MAUTIC_PORT}"
