@@ -98,6 +98,17 @@ jobs:
           fi
         done
 
+    - name: Check if DOMAIN points to the droplet IP
+      if: ${{ vars.DOMAIN }}
+      run: |
+        DOMAIN_IP=$(dig +short ${{ vars.DOMAIN }})
+        if [ "$DOMAIN_IP" == "${{ env.ip }}" ]; then
+          echo "Domain ${{ vars.DOMAIN }} correctly points to the droplet IP."
+        else
+          echo "Error: Domain ${{ vars.DOMAIN }} does not point to the droplet IP."
+          echo "To configure your DNS settings, access your domain registrar's DNS management page. Locate the DNS settings or DNS management section. You should create or update an A record with the following details: Name: @ (or your subdomain, e.g., www if your domain is www.example.com), Type: A, Value: ${{ env.ip }}. This change will point ${{ vars.DOMAIN }} to the IP address ${{ env.ip }}. Note that DNS changes can take up to 48 hours to propagate globally."          exit 1
+        fi
+
     - name: Prepare setup-dc.sh script
       run: |
         # Replace placeholders in setup-dc.sh
