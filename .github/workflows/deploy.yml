@@ -106,6 +106,8 @@ jobs:
         sed -i "s/{{EMAIL_ADDRESS}}/${{ env.EMAIL_ADDRESS }}/g" setup-dc.sh
         sed -i "s/{{MAUTIC_PASSWORD}}/${{ secrets.MAUTIC_PASSWORD }}/g" setup-dc.sh
         cat setup-dc.sh # debug
+      env:
+        EMAIL_ADDRESS: ${{ vars.EMAIL_ADDRESS }}
 
     - name: Deploy to Server
       uses: easingthemes/ssh-deploy@main
