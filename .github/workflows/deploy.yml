@@ -20,6 +20,39 @@ jobs:
         set +a
         echo "MAUTIC_PORT=${MAUTIC_PORT}" >> $GITHUB_ENV
 
+    - name: Check EMAIL_ADDRESS environment variable
+      run: |
+        if [ -z "${EMAIL_ADDRESS}" ]; then
+          echo "Error: Missing required environment variable: EMAIL_ADDRESS"
+          exit 1
+        fi
+      env:
+        EMAIL_ADDRESS: ${{ vars.EMAIL_ADDRESS }}
+
+    - name: Check required secrets
+      env:
+        DIGITALOCEAN_ACCESS_TOKEN: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+        DIGITALOCEAN_SSH_FINGERPRINT: ${{ secrets.DIGITALOCEAN_SSH_FINGERPRINT }}
+        MAUTIC_PASSWORD: ${{ secrets.MAUTIC_PASSWORD }}
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      run: |
+        error_missing_secrets=()
+        check_secret() {
+          if [ -z "${!1}" ]; then
+            error_missing_secrets+=("$1")
+          fi
+        }
+
+        check_secret "DIGITALOCEAN_ACCESS_TOKEN"
+        check_secret "DIGITALOCEAN_SSH_FINGERPRINT"
+        check_secret "MAUTIC_PASSWORD"
+        check_secret "SSH_PRIVATE_KEY"
+
+        if [ ${#error_missing_secrets[@]} -ne 0 ]; then
+          echo "Error: Missing required secrets: ${error_missing_secrets[*]}"
+          exit 1
+        fi
+
     - name: Install doctl
       uses: digitalocean/action-doctl@v2
       with:
