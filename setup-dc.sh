@@ -8,7 +8,7 @@ sleep 2
 done
 
 echo "## Check if Mautic is installed"
-if docker-compose exec -T mautic_web test -f /var/www/html/config/local.php && docker-compose exec -T mautic_web grep -q "site_url" /var/www/html/config/local.php; then
+if docker compose exec -T mautic_web test -f /var/www/html/config/local.php && docker compose exec -T mautic_web grep -q "site_url" /var/www/html/config/local.php; then
 echo "## Mautic is installed already."
 else
 docker stop basic-mautic_worker-1 # avoiding https://github.com/mautic/docker-mautic/issues/270
