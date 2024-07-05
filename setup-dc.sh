@@ -1,3 +1,4 @@
+cd /var/www
 docker compose build
 docker compose up -d mautic_web
 
