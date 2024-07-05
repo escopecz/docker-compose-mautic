@@ -13,6 +13,13 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Load .mautic_env variables
+      run: |
+        set -a
+        source .mautic_env
+        set +a
+        echo "MAUTIC_PORT=${MAUTIC_PORT}" >> $GITHUB_ENV
+
     - name: Install doctl
       uses: digitalocean/action-doctl@v2
       with:
@@ -58,6 +65,15 @@ jobs:
           fi
         done
 
+    - name: Prepare setup-dc.sh script
+      run: |
+        # Replace placeholders in setup-dc.sh
+        sed -i "s/{{IP_ADDRESS}}/${{ env.ip }}/g" setup-dc.sh
+        sed -i "s/{{PORT}}/${{ env.MAUTIC_PORT }}/g" setup-dc.sh
+        sed -i "s/{{EMAIL_ADDRESS}}/${{ env.EMAIL_ADDRESS }}/g" setup-dc.sh
+        sed -i "s/{{MAUTIC_PASSWORD}}/${{ secrets.MAUTIC_PASSWORD }}/g" setup-dc.sh
+        cat setup-dc.sh # debug
+
     - name: Deploy to Server
       uses: easingthemes/ssh-deploy@main
       with:
@@ -73,7 +89,4 @@ jobs:
 
     - name: Open your Mautic instance
       run: |
-        set -a
-        source .mautic_env
-        set +a
-        echo "You can visit the Mautic installation at http://${{ env.ip }}:${MAUTIC_PORT}"
+        echo "You can visit the Mautic installation at http://${{ env.ip }}:${{ env.MAUTIC_PORT }}"
