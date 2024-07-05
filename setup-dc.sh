@@ -3,9 +3,9 @@ docker compose up -d mautic_web
 
 echo "## Wait for basic-mautic_web-1 container to be fully running"
 
-while ! docker compose ps mautic_web | tee /tmp/docker_ps_output.txt | grep -q "Up"; do
-    echo "### Waiting for mautic_web to be fully running..."
-    cat /tmp/docker_ps_output.txt
+echo "## Wait for basic-mautic_web-1 container to be fully running"
+while ! docker exec basic-mautic_web-1 sh -c 'echo "Container is running"'; do
+    echo "### Waiting for basic-mautic_web-1 to be fully running..."
     sleep 2
 done
 
@@ -23,7 +23,7 @@ else
     done
 
     echo "## Installing Mautic..."
-    docker compose exec -T -u www-data mautic_web php ./bin/console mautic:install --force --admin_email {{EMAIL_ADDRESS}} --admin_password {{MAUTIC_PASSWORD}} http://{{IP_ADDRESS}}:{{PORT}}
+    docker compose exec -T -u www-data -w /var/www/html mautic_web php ./bin/console mautic:install --force --admin_email {{EMAIL_ADDRESS}} --admin_password {{MAUTIC_PASSWORD}} http://{{IP_ADDRESS}}:{{PORT}}
 fi
 
 echo "## Starting all the containers"
