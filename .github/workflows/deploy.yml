@@ -71,30 +71,4 @@ jobs:
         SCRIPT_BEFORE: |
           mkdir -p /var/www
         SCRIPT_AFTER: |
-          echo $RSYNC_STDOUT
-          cd /var/www
-          pwd
-          ls -la
-          docker compose build
-          docker compose up -d mautic_web
-
-          # Wait for basic-mautic_web-1 container to be fully running
-          while ! docker exec basic-mautic_web-1 sh -c 'echo "Container is running"'; do
-            echo "Waiting for basic-mautic_web-1 to be fully running..."
-            sleep 2
-          done
-
-          if test -f /var/www/html/config/local.php && grep -q "site_url" /var/www/html/config/local.php; then
-            echo "Mautic is installed already."
-          else
-            docker stop basic-mautic_worker-1 # avoiding https://github.com/mautic/docker-mautic/issues/270
-            # Ensure the worker is stopped before installing Mautic
-            while docker ps -q --filter name=basic-mautic_worker-1 | grep -q .; do
-              echo "Waiting for basic-mautic_worker-1 to stop..."
-              sleep 5
-            done
-            docker exec -u www-data -w /var/www/html basic-mautic_web-1 php ./bin/console mautic:install --force --admin_email willchange@mautic.org --admin_password MauticR0cks! http://157.230.80.20:8001
-          fi
-
-          # Start all the containers.
-          docker compose up -d
+          ./run.sh
