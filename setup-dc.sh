@@ -55,7 +55,7 @@ fi
 
 echo "## $DOMAIN is available and points to this droplet. Nginx configuration..."
 
-SOURCE_PATH="./nginx-virtual-host-$DOMAIN"
+SOURCE_PATH="/var/www/nginx-virtual-host-$DOMAIN"
 TARGET_PATH="/etc/nginx/sites-enabled/nginx-virtual-host-$DOMAIN"
 
 # Remove the existing symlink if it exists
@@ -78,13 +78,13 @@ if [ ! -f "/etc/letsencrypt/live/$DOMAIN/README" ]; then
     echo "## Configuring Let's Encrypt for $DOMAIN..."
 
     # Stop Nginx to free up port 80 for Certbot
-    docker compose stop nginx
+    systemctl stop nginx
 
     # Use Certbot to obtain a certificate
     certbot certonly --standalone -d $DOMAIN --non-interactive --agree-tos -m {{EMAIL_ADDRESS}}
 
     # Start Nginx again
-    docker compose start nginx
+    systemctl start nginx
 
     echo "## Let's Encrypt configured for $DOMAIN"
 else
