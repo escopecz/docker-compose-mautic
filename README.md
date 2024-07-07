@@ -134,9 +134,18 @@ f8089c6149df   basic-mautic_web-1      0.01%     159.4MiB / 957.4MiB   16.65%   
 
 ## Scaling
 
+This setup will allow you to start small, monitor the resources and if some CPU, RAM, Disk or Transfer will start hitting a limit then you can scale horizontically. If the emails are sending too slow, you can scale vertically.
+
 ### Horizontal scaling
 
+You can resize your VPS any time and add resources as you see fit. Example:
+![Resizing a VPS](https://github.com/escopecz/docker-compose-mautic/assets/1235442/2fac709d-1d0b-4771-b408-5563de19a001)
+
 ### Vertical scaling
+
+This setup currently allows to vertically scale the worker containers. You can increase the [`replicas`](docker-compose.yml) and speed up the email sending.
+
+_Future glance: In Mautic 5 the workers are "just" sending emails, but the cron jobs should be slowly moved to workers as well. This deployment setup can also add a load ballancer and in that case we will be able to scale the web containers. Also a database read only replica can be added if the SQL requests are the bottleneck._
 
 ## Thank you
 
