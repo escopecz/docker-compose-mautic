@@ -33,7 +33,7 @@ The infrastructure that this repository creates lets you start small and scale [
 
 This repository is a set of configurations and scripts that run automatically on every change and create a Digital Ocean Droplet (VPS), configure it, install a clean Mautic there and everything necessary including HTTPS.
 
-![Mautic Docker Compose diagram](main/Mautic-dc-diagram.drawio.svg?token=GHSAT0AAAAAACLTVJQRQOSJXOTFUT6MLZWUZUKRCKQ)
+![Mautic Docker Compose diagram](Mautic-dc-diagram.drawio.svg)
 
 ## Requirements
 
