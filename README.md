@@ -14,7 +14,7 @@ By using both these options you will get the bet service possible and support th
 
 Do you still want to get your hands dirty? That's OK too.
 
-## Why to host this way?
+## Why to deploy this way?
 
 This is a bit different from your normal "execute a bunch of commands" tutorials. This is automated, maintainable deploy process that will keep detailed history of who changed when and why.
 
@@ -29,12 +29,6 @@ It allows you to:
 
 The infrastructure that this repository creates lets you start small and scale [vertically](#vertical-scaling) by increasing DigitalOcean resources and also [horizontally](#horizontal-scaling) by creating more workers to send emails faster.
 
-## How does it work
-
-This repository is a set of configurations and scripts that run automatically on every change and create a Digital Ocean Droplet (VPS), configure it, install a clean Mautic there and everything necessary including HTTPS.
-
-![Mautic Docker Compose diagram](Mautic-dc-diagram.drawio.svg)
-
 ## Requirements
 
 The scripts are there and ready. You need to provide keys and values so it can do all the magic.
@@ -45,19 +39,79 @@ The scripts are there and ready. You need to provide keys and values so it can d
 
 ## What you need to deploy
 
-Here's what you need where to get it to sucessfully deploy Mautic.
+In order to deploy Mautic, you need a few "secrets" and "variables" so it can perform all the tasks.
 
 ## Setup Github Actions Secrets
-- https://cloud.digitalocean.com/account/api/tokens
-- `DIGITALOCEAN_ACCESS_TOKEN`
-- https://cloud.digitalocean.com/account/security
-- `DIGITALOCEAN_SSH_FINGERPRINT`
+
+The secrets are values you don't want anyone else to see.
+
+- `SSH_PRIVATE_KEY` is used to access the VPS via SSH by Github Actions, the deployment process. You can use the one you already have in `~/.ssh` folder or generate a new one. Follow [the official documentation](https://docs.digitalocean.com/products/droplets/how-to/add-ssh-keys) to generate it and add it to the DigitalOcean configuration.
+- Once you have stored the SSH key to the DigitalOcean configuration, copy the Fingerprint for `DIGITALOCEAN_SSH_FINGERPRINT` at https://cloud.digitalocean.com/account/security
+- Create `DIGITALOCEAN_ACCESS_TOKEN` at https://cloud.digitalocean.com/account/api/tokens
+- `MAUTIC_PASSWORD` is an admin password to log in to the freshly installed Mautic. Store it to your password manager. You cannot access it afterwards.
+
+This is how the secrets section should look like:
+
+
+## Setup Github Actions Variables
+
+The variables are values that is OK to be visible.
+
+- `EMAIL_ADDRESS` will be used to create a Mautic admin user and you'll use it to log in. It is also used to build the SSL certificates.
+- `DOMAIN` is the domain that will be used to access your Mautic. Do not add it at first. Add it only after you know the VPS IP address and after you've pointed the DNS record to that IP address. If the DOMAIN is unknown, you can still access your new Mautic via the IP address.
+
+Example:
+
+
+## How does it work
+
+This repository is a set of configurations and scripts that run automatically on every change and create a Digital Ocean Droplet (VPS), configure it, install a clean Mautic there and everything necessary including HTTPS.
+
+![Mautic Docker Compose diagram](Mautic-dc-diagram.drawio.svg)
 
 ### Virtual Private Server (VPS)
 
 The deployment process will create a VPS (a DigitalOcean droplet) for you with the lowest possible configuration which at this time costs $6/month. It has 1GB of memory and @% GB disk. It will create itself in the New York region. You can modify all these values here. You can always upgrade the memory and disk size. You cannot change the region.
 
 Another option is to create the VPS with the name of `mautic-vps` via the DigitalOcean's user interface where you'll be able to see all the available options. Once you run this deployment process it will use the VPS you've created if the name will match.
+
+### Nginx
+
+Nginx is a server like Apache. This server is installed directly on the VPS and the only reason is to handle SSL. I other words, to handle the certificates necessary for HTTPS. The `mautic_web` container actually have its own server to handle HTTP requests. In this case it is Apache.
+
+### Docker Compose vs Docker
+
+**Docker** is a program that can manage lightweight containers. It serves the same role as virtual machines. The difference is that containers are lighter in size and so creating them takes less time and they do not take that much space.
+
+A container is a list or a recipe of commands that needs to be executed to build whatever you want the container to do. In this case we take [this Dockerfile](https://github.com/mautic/docker-mautic/blob/mautic5/apache/Dockerfile) as a base and define [our own Dockerfile](Dockerfile) sprinkle a few more commands on top of it so we could install themes and plugins.
+
+**Docker Compose** enables simplified networking between the containers and [1 config file](docker-compose.yml) where all that interconnection is described.
+
+The [docker-compose.yml](docker-compose.yml) in this repository was copied from https://github.com/mautic/docker-mautic/tree/mautic5/examples/basic
+
+### Containers
+
+There are 4 containers created with the deployment process by default.
+
+#### mautic_web
+
+This container is the only public container. Meaning it's the only container accessible with HTTP requests. It's the one that we interact with via a browser.
+
+#### mautic_cron
+
+This container's whole purpose is to run cron commands. The crontab is created by [this script](https://github.com/mautic/docker-mautic/blob/mautic5/common/entrypoint_mautic_cron.sh) and modifiable on the VPS as it's a shared volume. However, to continue the philosophy of this repository, it should be created and commited to this repository instead. See the Todo section bellow.
+
+#### mautic_worker
+
+Mautic 5 started using workers for sending emails. This container is a worker that is waiting for the email jobs and executing the email send. If you want to speed up the email send speed, you can configure the [`replicas`](docker-compose.yml) configuration and the deployment process will take care of it.
+
+### db
+
+`db` is a container running MySql. All other containers are using this one to store and read data. The data are stored as a volume so they are not lost when this container is deleted.
+
+### Volumes
+
+Volumes are basically files and directories that are shared between a container and its host computer. Containers are stateless by default so when a container is deleted, it deletes all its files as well. If there are some files we want to keep we need to store them to the host computer. Hence that's why we have volumes in our setup. For example for files, images that you upload to Mautic. But also for the database.
 
 ## Monitoring
 
@@ -102,3 +156,4 @@ The links to [Digital Ocean](https://m.do.co/c/d0ce234a41be) in this readme are 
 - [ ] Load ballancer.
 - [ ] MySql replica.
 - [ ] Download the setup-dc.log from the droplet to GH Action files for easier inspection.
+- [ ] Make the crontab configurable in this repository.
