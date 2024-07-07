@@ -141,7 +141,7 @@ jobs:
         TARGET: /var/www
         EXCLUDE: ".git"
         SCRIPT_BEFORE: mkdir -p /var/www
-        SCRIPT_AFTER: /var/www/setup-dc.sh
+        SCRIPT_AFTER: /var/www/setup-dc.sh > /var/log/setup-dc.log 2>&1
 
     - name: Open your Mautic instance
       run: |
