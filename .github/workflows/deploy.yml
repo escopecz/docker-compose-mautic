@@ -108,6 +108,7 @@ jobs:
           mv nginx-virtual-host-template "nginx-virtual-host-${{ vars.DOMAIN }}"
           # Replace DOMAIN_NAME inside the file with the actual domain
           sed -i "s/DOMAIN_NAME/${{ vars.DOMAIN }}/g" "nginx-virtual-host-${{ vars.DOMAIN }}"
+          sed -i "s/PORT/${{ env.MAUTIC_PORT }}/g" "nginx-virtual-host-${{ vars.DOMAIN }}"
           cat nginx-virtual-host-${{ vars.DOMAIN }} # debug
         else
           echo "Error: Domain ${{ vars.DOMAIN }} does not point to the droplet IP."
