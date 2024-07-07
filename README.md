@@ -33,6 +33,8 @@ The infrastructure that this repository creates lets you start small and scale [
 
 This repository is a set of configurations and scripts that run automatically on every change and create a Digital Ocean Droplet (VPS), configure it, install a clean Mautic there and everything necessary including HTTPS.
 
+![Mautic Docker Compose diagram](main/Mautic-dc-diagram.drawio.svg?token=GHSAT0AAAAAACLTVJQRQOSJXOTFUT6MLZWUZUKRCKQ)
+
 ## Requirements
 
 The scripts are there and ready. You need to provide keys and values so it can do all the magic.
@@ -60,6 +62,8 @@ Another option is to create the VPS with the name of `mautic-vps` via the Digita
 ## Monitoring
 
 Digitalocean provides nice resource monitoring out of the box. Here is a screenshot how the resource usage looks after fresh installation.
+
+![DigitalOcean monitoring](https://github.com/escopecz/docker-compose-mautic/assets/1235442/3f0d8dea-3321-47c6-9176-c0fe71f8204d)
 
 If something is acting up you can see what resources each container is using with command:
 
