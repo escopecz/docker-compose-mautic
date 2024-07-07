@@ -52,21 +52,23 @@ services:
       - default
 
   mautic_cron:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    links:
-      - db:mysql
-    volumes: *mautic-volumes
-    environment:
-      - DOCKER_MAUTIC_ROLE=mautic_cron
-    env_file:
-      - .mautic_env
-    depends_on:
-      mautic_web:
-        condition: service_healthy
-    networks:
-      - default
+      build:
+        context: .
+        dockerfile: Dockerfile
+      links:
+        - db:mysql
+      volumes:
+        - *mautic-volumes
+        - ./cron/mautic:/etc/cron.d/mautic
+      environment:
+        - DOCKER_MAUTIC_ROLE=mautic_cron
+      env_file:
+        - .mautic_env
+      depends_on:
+        mautic_web:
+          condition: service_healthy
+      networks:
+        - default
 
   mautic_worker:
     build:
