@@ -149,7 +149,7 @@ jobs:
         if [ -z "${DOMAIN}" ]; then
           echo "You can visit the Mautic installation at http://${{ env.ip }}:${{ env.MAUTIC_PORT }}"
         else
-          echo "You can visit the Mautic installation at http://${DOMAIN}:${{ env.MAUTIC_PORT }}"
+          echo "You can visit the Mautic installation at http://${DOMAIN}"
         fi
       env:
         DOMAIN: ${{ vars.DOMAIN }}
