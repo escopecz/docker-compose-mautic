@@ -4,7 +4,13 @@ This is a real example of automate hosting Mautic 5 instance(s) on Virtual Priva
 
 ## Is this for you?
 
-Hosting a web app is not an easy job. You need the technical knowledge and the time to maintain it. This repositry will help but it still requires both especially over time. Please, cosider using services of official [Mautic partners](https://www.mautic.org/mautic-partners) if you just want to use Mautic without any problems and get all the services to make your business succesful. Plus, the partners support the Mautic project and let it grow.
+Hosting a web app is not an easy job. You need the technical knowledge and the time to maintain it. This repositry will help but it still requires both. Especially over time.
+
+The easiest option is to start your 2 week trial today: https://m.mautic.org/mautic-start-your-trial
+
+Or if you like more choices consider the official [Mautic partners](https://www.mautic.org/mautic-partners) if you just want to use Mautic without any problems and get all the services to make your business succesful.
+
+By using both these options you will get the bet service possible and support the Mautic project.
 
 Do you still want to get your hands dirty? That's OK too.
 
@@ -13,15 +19,15 @@ Do you still want to get your hands dirty? That's OK too.
 This is a bit different from your normal "execute a bunch of commands" tutorials. This is automated, maintainable deploy process that will keep detailed history of who changed when and why.
 
 It allows you to:
+- Install Mautic within 10 minutes.
 - Upgrade Mautic with 1 line change.
 - Downgrade with commit revert.
-- Anyone from your team can do this. Avoid the [Bus Factor](https://en.wikipedia.org/wiki/Bus_factor).
-- GitHub allows you to set rules that someone needs to approve all changes before they are applied.
+- Install themes and plugins via Composer.
+- Anyone from your team can do this. Avoid the [Bus Factor](https://en.wikipedia.org/wiki/Bus_factor). GitHub allows you to set rules that someone needs to approve all changes before they are applied.
 - Project management with task boards in place.
-- Automatic deployments
-- Security scans
+- Security scans.
 
-The infrastructure that this repository creates lets you start small and scale vertically by increasing DigitalOcean resources and also horizontally by creating more workers to send emails faster.
+The infrastructure that this repository creates lets you start small and scale [vertically](#vertical-scaling) by increasing DigitalOcean resources and also [horizontally](#horizontal-scaling) by creating more workers to send emails faster.
 
 ## How does it work
 
@@ -55,7 +61,11 @@ Another option is to create the VPS with the name of `mautic-vps` via the Digita
 
 Digitalocean provides nice resource monitoring out of the box. Here is a screenshot how the resource usage looks after fresh installation.
 
-If something is acting up you can see what resources each container is using with command `docker compose stats`. The output looks like this:
+If something is acting up you can see what resources each container is using with command:
+
+`docker compose stats`
+
+The output looks like this:
 ```
 CONTAINER ID   NAME                    CPU %     MEM USAGE / LIMIT     MEM %     NET I/O           BLOCK I/O        PIDS
 da1d14c8495b   basic-mautic_cron-1     0.01%     25.7MiB / 957.4MiB    2.68%     800kB / 516kB     679MB / 10.8MB   4
