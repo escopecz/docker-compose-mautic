@@ -39,7 +39,7 @@ The scripts are there and ready. You need to provide keys and values so it can d
 
 ## What you need to deploy
 
-In order to deploy Mautic, you need a few "secrets" and "variables" so it can perform all the tasks.
+In order to deploy Mautic, you need a few "secrets" and "variables" so it can perform all the tasks. You cannot access the value it is saved.
 
 ## Setup Github Actions Secrets
 
@@ -48,20 +48,20 @@ The secrets are values you don't want anyone else to see.
 - `SSH_PRIVATE_KEY` is used to access the VPS via SSH by Github Actions, the deployment process. You can use the one you already have in `~/.ssh` folder or generate a new one. Follow [the official documentation](https://docs.digitalocean.com/products/droplets/how-to/add-ssh-keys) to generate it and add it to the DigitalOcean configuration.
 - Once you have stored the SSH key to the DigitalOcean configuration, copy the Fingerprint for `DIGITALOCEAN_SSH_FINGERPRINT` at https://cloud.digitalocean.com/account/security
 - Create `DIGITALOCEAN_ACCESS_TOKEN` at https://cloud.digitalocean.com/account/api/tokens
-- `MAUTIC_PASSWORD` is an admin password to log in to the freshly installed Mautic. Store it to your password manager. You cannot access it afterwards.
+- `MAUTIC_PASSWORD` is an admin password to log in to the freshly installed Mautic. Store it to your password manager.
 
 This is how the secrets section should look like:
-
+![Github Actions Secrets](https://github.com/escopecz/docker-compose-mautic/assets/1235442/afbf1ea0-e16b-4bcf-a58d-90ba03c63204)
 
 ## Setup Github Actions Variables
 
-The variables are values that is OK to be visible.
+The variables are values that is OK to be visible. You can edit the vaule after it is saved.
 
 - `EMAIL_ADDRESS` will be used to create a Mautic admin user and you'll use it to log in. It is also used to build the SSL certificates.
 - `DOMAIN` is the domain that will be used to access your Mautic. Do not add it at first. Add it only after you know the VPS IP address and after you've pointed the DNS record to that IP address. If the DOMAIN is unknown, you can still access your new Mautic via the IP address.
 
 Example:
-
+![Github Actions Variables](https://github.com/escopecz/docker-compose-mautic/assets/1235442/bfc5df49-55b0-4a1d-a8ee-181429bdf244)
 
 ## How does it work
 
