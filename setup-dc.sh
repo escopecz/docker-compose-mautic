@@ -62,9 +62,14 @@ fi
 ln -s $SOURCE_PATH $TARGET_PATH
 echo "Symlink created for $DOMAIN configuration."
 
-# Reload Nginx to apply changes
-nginx -s reload
-echo "Nginx reloaded to apply new configuration."
+# Check if Nginx is running and reload to apply changes
+if ! pgrep -x nginx > /dev/null; then
+    echo "Nginx is not running, starting Nginx..."
+    systemctl start nginx
+else
+    echo "Reloading Nginx to apply new configuration."
+    nginx -s reload
+fi
 
 echo "## Proceeding with Let's Encrypt configuration..."
 
@@ -88,7 +93,7 @@ fi
 # Check if the cron job for renewal is already set
 if ! crontab -l | grep -q 'certbot renew'; then
     echo "## Setting up cron job for Let's Encrypt certificate renewal..."
-    (crontab -l 2>/dev/null; echo "0 0 1 * * certbot renew --post-hook 'docker compose restart nginx'") | crontab -
+    (crontab -l 2>/dev/null; echo "0 0 1 * * certbot renew --post-hook 'systemctl reload nginx'") | crontab -
 else
     echo "## Cron job for Let's Encrypt certificate renewal is already set"
 fi
