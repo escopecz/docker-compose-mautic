@@ -86,7 +86,7 @@ This repository wouldn't be possible without the great work that the Mautic comm
 
 ## Disclaimer
 
-The links to [Digital Ocean](https://m.do.co/c/d0ce234a41be) are tracked by a referal program. If you are new to Digital Ocean, you'll get $200 in credit and I get $25 credit. You can use any other VPS provider. The steps will be very similar.
+The links to [Digital Ocean](https://m.do.co/c/d0ce234a41be) in this readme are tracked by a referal program. If you are new to Digital Ocean, you'll get $200 in credit and I get $25 credit. You can use access the DigitalOcean website any other way to avoid this referal.
 
 ## Todos
 - [ ] Run `docker compose build` only if necessary to save time. For example if the Dockerfile changes.
