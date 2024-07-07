@@ -25,3 +25,73 @@ fi
 
 echo "## Starting all the containers"
 docker compose up -d
+
+DOMAIN="{{DOMAIN_NAME}}"
+
+if [[ "$DOMAIN" == *"DOMAIN_NAME"* ]]; then
+    echo "The DOMAIN variable is not set yet."
+    exit 0
+fi
+
+echo "## Checking if $DOMAIN is available online..."
+if ! curl -s --head http://$DOMAIN/ | grep "200 OK" > /dev/null; then
+    echo "## $DOMAIN is not available online. Exiting..."
+    exit 1
+fi
+
+DROPLET_IP=$(curl -s http://icanhazip.com)
+
+echo "## Checking if $DOMAIN points to this DO droplet..."
+DOMAIN_IP=$(dig +short $DOMAIN)
+if [ "$DOMAIN_IP" != "$DROPLET_IP" ]; then
+    echo "## $DOMAIN does not point to this droplet IP ($DROPLET_IP). Exiting..."
+    exit 1
+fi
+
+echo "## $DOMAIN is available and points to this droplet. Nginx configuration..."
+
+SOURCE_PATH="./nginx-virtual-host-$DOMAIN"
+TARGET_PATH="/etc/nginx/sites-enabled/nginx-virtual-host-$DOMAIN"
+
+# Remove the existing symlink if it exists
+if [ -L "$TARGET_PATH" ]; then
+    rm $TARGET_PATH
+    echo "Existing symlink for $DOMAIN configuration removed."
+fi
+
+# Create a new symlink
+ln -s $SOURCE_PATH $TARGET_PATH
+echo "Symlink created for $DOMAIN configuration."
+
+# Reload Nginx to apply changes
+nginx -s reload
+echo "Nginx reloaded to apply new configuration."
+
+echo "## Proceeding with Let's Encrypt configuration..."
+
+if [ ! -f "/etc/letsencrypt/live/$DOMAIN/README" ]; then
+    echo "## Configuring Let's Encrypt for $DOMAIN..."
+
+    # Stop Nginx to free up port 80 for Certbot
+    docker compose stop nginx
+
+    # Use Certbot to obtain a certificate
+    certbot certonly --standalone -d $DOMAIN --non-interactive --agree-tos -m {{EMAIL_ADDRESS}}
+
+    # Start Nginx again
+    docker compose start nginx
+
+    echo "## Let's Encrypt configured for $DOMAIN"
+else
+    echo "## Let's Encrypt is already configured for $DOMAIN"
+fi
+
+# Check if the cron job for renewal is already set
+if ! crontab -l | grep -q 'certbot renew'; then
+    echo "## Setting up cron job for Let's Encrypt certificate renewal..."
+    (crontab -l 2>/dev/null; echo "0 0 1 * * certbot renew --post-hook 'docker compose restart nginx'") | crontab -
+else
+    echo "## Cron job for Let's Encrypt certificate renewal is already set"
+fi
+
+echo "## Script execution completed"

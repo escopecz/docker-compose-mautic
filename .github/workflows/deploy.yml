@@ -98,15 +98,20 @@ jobs:
           fi
         done
 
-    - name: Check if DOMAIN points to the droplet IP
+    - name: Prepare virtual server configuration
       if: ${{ vars.DOMAIN }}
       run: |
         DOMAIN_IP=$(dig +short ${{ vars.DOMAIN }})
         if [ "$DOMAIN_IP" == "${{ env.ip }}" ]; then
           echo "Domain ${{ vars.DOMAIN }} correctly points to the droplet IP."
+          # Rename the nginx-virtual-host-template file
+          mv nginx-virtual-host-template "nginx-virtual-host-${{ vars.DOMAIN }}"
+          # Replace DOMAIN_NAME inside the file with the actual domain
+          sed -i "s/DOMAIN_NAME/${{ vars.DOMAIN }}/g" "nginx-virtual-host-${{ vars.DOMAIN }}"
+          cat nginx-virtual-host-${{ vars.DOMAIN }} # debug
         else
           echo "Error: Domain ${{ vars.DOMAIN }} does not point to the droplet IP."
-          echo "To configure your DNS settings, access your domain registrar's DNS management page. Locate the DNS settings or DNS management section. You should create or update an A record with the following details: Name: @ (or your subdomain, e.g., www if your domain is www.example.com), Type: A, Value: ${{ env.ip }}. This change will point ${{ vars.DOMAIN }} to the IP address ${{ env.ip }}. Note that DNS changes can take up to 48 hours to propagate globally."          exit 1
+          echo "To configure your DNS settings, access your domain registrar's DNS management page. Locate the DNS settings or DNS management section. You should create or update an A record with the following details: Name: @ (or your subdomain, e.g., www if your domain is www.example.com), Type: A, Value: ${{ env.ip }}. This change will point ${{ vars.DOMAIN }} to the IP address ${{ env.ip }}. Note that DNS changes can take up to 48 hours to propagate globally."
           exit 1
         fi
 
@@ -117,9 +122,13 @@ jobs:
         sed -i "s/{{PORT}}/${{ env.MAUTIC_PORT }}/g" setup-dc.sh
         sed -i "s/{{EMAIL_ADDRESS}}/${{ env.EMAIL_ADDRESS }}/g" setup-dc.sh
         sed -i "s/{{MAUTIC_PASSWORD}}/${{ secrets.MAUTIC_PASSWORD }}/g" setup-dc.sh
+        if [ ! -z "${{ env.DOMAIN }}" ]; then
+          sed -i "s/{{DOMAIN_NAME}}/${{ env.DOMAIN }}/g" setup-dc.sh
+        fi
         cat setup-dc.sh # debug
       env:
         EMAIL_ADDRESS: ${{ vars.EMAIL_ADDRESS }}
+        DOMAIN: ${{ vars.DOMAIN }}
 
     - name: Deploy to Server
       uses: easingthemes/ssh-deploy@main
