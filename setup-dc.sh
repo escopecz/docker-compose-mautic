@@ -38,12 +38,6 @@ if [[ "$DOMAIN" == *"DOMAIN_NAME"* ]]; then
     exit 0
 fi
 
-echo "## Checking if $DOMAIN is available online..."
-if ! curl -s --head http://$DOMAIN/ | grep "200 OK" > /dev/null; then
-    echo "## $DOMAIN is not available online. Exiting..."
-    exit 1
-fi
-
 DROPLET_IP=$(curl -s http://icanhazip.com)
 
 echo "## Checking if $DOMAIN points to this DO droplet..."
