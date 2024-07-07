@@ -1,0 +1,16 @@
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+BASH_ENV=/tmp/cron.env
+
+* * * * * php /var/www/html/bin/console mautic:segments:update 2>&1 | tee /tmp/stdout
+* * * * * php /var/www/html/bin/console mautic:campaigns:update 2>&1 | tee /tmp/stdout
+* * * * * php /var/www/html/bin/console mautic:campaigns:trigger 2>&1 | tee /tmp/stdout
+* * * * * php /var/www/html/bin/console mautic:broadcasts:send 2>&1 | tee /tmp/stdout
+* * * * * php /var/www/html/bin/console mautic:import 2>&1 | tee /tmp/stdout
+* * * * * php /var/www/html/bin/console mautic:webhooks:process 2>&1 | tee /tmp/stdout
+0 * * * * php /var/www/html/bin/console mautic:reports:scheduler 2>&1 | tee /tmp/stdout
+* * * * * php /var/www/html/bin/console mautic:custom-field:create-column 2>&1 | tee /tmp/stdout
+0 0 * * 0 php /var/www/html/bin/console mautic:iplookup:download 2>&1 | tee /tmp/stdout
+0 0 * * 0 php /var/www/html/bin/console mautic:donotsell:download 2>&1 | tee /tmp/stdout
+0 0 * * 0 php /var/www/html/bin/console mautic:max-mind:purge 2>&1 | tee /tmp/stdout
+
