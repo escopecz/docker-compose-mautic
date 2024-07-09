@@ -62,6 +62,11 @@ fi
 ln -s $SOURCE_PATH $TARGET_PATH
 echo "Symlink created for $DOMAIN configuration."
 
+if ! nginx -t; then
+    echo "Nginx configuration test failed, stopping the script."
+    exit 1
+fi
+
 # Check if Nginx is running and reload to apply changes
 if ! pgrep -x nginx > /dev/null; then
     echo "Nginx is not running, starting Nginx..."
@@ -76,15 +81,10 @@ echo "## Proceeding with Let's Encrypt configuration..."
 if [ ! -f "/etc/letsencrypt/live/$DOMAIN/README" ]; then
     echo "## Configuring Let's Encrypt for $DOMAIN..."
 
-    # Stop Nginx to free up port 80 for Certbot
-    systemctl stop nginx
+    # Use Certbot with the Nginx plugin to obtain and install a certificate
+    certbot --nginx -d $DOMAIN --non-interactive --agree-tos -m {{EMAIL_ADDRESS}}
 
-    # Use Certbot to obtain a certificate
-    certbot certonly --standalone -d $DOMAIN --non-interactive --agree-tos -m {{EMAIL_ADDRESS}}
-
-    # Start Nginx again
-    systemctl start nginx
-
+    # Nginx will be reloaded automatically by Certbot after obtaining the certificate
     echo "## Let's Encrypt configured for $DOMAIN"
 else
     echo "## Let's Encrypt is already configured for $DOMAIN"
