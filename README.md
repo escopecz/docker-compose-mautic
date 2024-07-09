@@ -41,6 +41,8 @@ The scripts are there and ready. You need to provide keys and values so it can d
 
 In order to deploy Mautic, you need a few "secrets" and "variables" so it can perform all the tasks. You cannot access the value it is saved.
 
+Github Actions is the tool that will take the code from this repository and executes it. That is the deployment process that will create the VPS, configures it and install Mautic with Docker Compose inside.
+
 ## Setup Github Actions Secrets
 
 The secrets are values you don't want anyone else to see.
@@ -122,11 +124,11 @@ In the [Dockerfile](Dockerfile) there is an example of how to install a package.
 
 ## Cron jobs
 
-TODO
+Cron job configuration is usually a big pain to setup for newcomers. In this case you can manage them in this repository in the [cron/mautic](cron/mautic) file. Make a change, commit and it will deploy to the server automatically. Most of the cron jobs are prepared there anyway so you may not need to make any change.
 
 ## HTTPS
 
-TODO
+SSL certificate management is also a pain to manage. In this case you just point the domain DNS A record to the VPS IP address, configure the DOMAIN variable in the Github repository Github Actions and re-run the latest job. Everything else is automated.
 
 ## Monitoring
 
@@ -172,6 +174,10 @@ basic-mautic_cron-1     basic-mautic_cron     "/entrypoint.sh apac…"   mautic_
 basic-mautic_web-1      basic-mautic_web      "/entrypoint.sh apac…"   mautic_web      40 minutes ago   Up 40 minutes (healthy)   0.0.0.0:8001->80/tcp, :::8001->80/tcp
 basic-mautic_worker-1   basic-mautic_worker   "/entrypoint.sh apac…"   mautic_worker   40 minutes ago   Up 27 minutes             80/tcp
 ```
+
+### Getting the deploy script logs
+
+If there is a problem with the deployment, you can see it in the logs that are being downloaded and attached to each Github Action job as an artifact. So you can see how the deployment went without logging into the server. Just go to the summary of the job you are interested in and download the `setup-dc-log` artifact for inspection.
 
 ### Getting the container logs
 
