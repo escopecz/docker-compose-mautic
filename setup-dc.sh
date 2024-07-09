@@ -76,19 +76,13 @@ else
     nginx -s reload
 fi
 
-echo "## Proceeding with Let's Encrypt configuration..."
+echo "## Configuring Let's Encrypt for $DOMAIN..."
 
-if [ ! -f "/etc/letsencrypt/live/$DOMAIN/README" ]; then
-    echo "## Configuring Let's Encrypt for $DOMAIN..."
+# Use Certbot with the Nginx plugin to obtain and install a certificate
+certbot --nginx -d $DOMAIN --non-interactive --agree-tos -m {{EMAIL_ADDRESS}}
 
-    # Use Certbot with the Nginx plugin to obtain and install a certificate
-    certbot --nginx -d $DOMAIN --non-interactive --agree-tos -m {{EMAIL_ADDRESS}}
-
-    # Nginx will be reloaded automatically by Certbot after obtaining the certificate
-    echo "## Let's Encrypt configured for $DOMAIN"
-else
-    echo "## Let's Encrypt is already configured for $DOMAIN"
-fi
+# Nginx will be reloaded automatically by Certbot after obtaining the certificate
+echo "## Let's Encrypt configured for $DOMAIN"
 
 # Check if the cron job for renewal is already set
 if ! crontab -l | grep -q 'certbot renew'; then
