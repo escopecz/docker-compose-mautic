@@ -98,4 +98,13 @@ else
     echo "## Cron job for Let's Encrypt certificate renewal is already set"
 fi
 
+echo "## Check if Mautic is installed"
+if docker compose exec -T mautic_web test -f /var/www/html/config/local.php && docker compose exec -T mautic_web grep -q "site_url" /var/www/html/config/local.php; then
+    echo "## Mautic is installed already."
+    
+    # Replace the site_url value with the domain
+    echo "## Updating site_url in Mautic configuration..."
+    docker compose exec -T mautic_web sed -i "s|'site_url' => '.*',|'site_url' => 'https://$DOMAIN',|g" /var/www/html/config/local.php
+fi
+
 echo "## Script execution completed"
