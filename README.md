@@ -113,6 +113,21 @@ Mautic 5 started using workers for sending emails. This container is a worker th
 
 Volumes are basically files and directories that are shared between a container and its host computer. Containers are stateless by default so when a container is deleted, it deletes all its files as well. If there are some files we want to keep we need to store them to the host computer. Hence that's why we have volumes in our setup. For example for files, images that you upload to Mautic. But also for the database.
 
+## How to install themes and plugins
+
+One of the goals of this deployment is to have a trace of everything related to the Mautic instance configuration. Installing a plugin or a theme can break your Mautic so it's good to have a way to roll back if it happens. And to have a trace of who installed what, when and why is also great to have. Git gives us all that.
+
+In the [Dockerfile](Dockerfile) there is an example of how to install a package. In this case it is a [`chimpino/theme-air`](https://chimpino.com/themes) theme. If you need to install anyting else, you'll just add a new line with the package you need and commit this one line change.
+
+
+## Cron jobs
+
+TODO
+
+## HTTPS
+
+TODO
+
 ## Monitoring
 
 Digitalocean provides nice resource monitoring out of the box. Here is a screenshot how the resource usage looks after fresh installation.
@@ -131,6 +146,66 @@ da1d14c8495b   basic-mautic_cron-1     0.01%     25.7MiB / 957.4MiB    2.68%    
 f8089c6149df   basic-mautic_web-1      0.01%     159.4MiB / 957.4MiB   16.65%    2.65MB / 16.4MB   831MB / 56.2MB   13
 5d58d082d20c   basic-db-1              1.29%     95.07MiB / 957.4MiB   9.93%     17.9MB / 20.1MB   824MB / 1.04GB   49
 ```
+
+## Debugging
+
+You may need to execute some command in the VPS or one of the nodes from time to time. Or debug what's happening like with the monitoring above. Here's a list of useful commands.
+
+For all `docker compose` commands navigate to the folder where this deployment script is pushing the `docker-compose.yml` file. From this folder you can use the `docker compose` commands.
+
+`cd /var/www/`
+
+### Online terminal
+
+You can controll everything from the browser. DigitalOcean has this nice feature that opens a terminal directly from the administration. All you need is a browser. Follow this screenshot:
+
+### List all containers
+
+`docker compose ps`
+
+Example output:
+```
+root@mautic-vps:/var/www# docker compose ps
+NAME                    IMAGE                 COMMAND                  SERVICE         CREATED          STATUS                    PORTS
+basic-db-1              mysql:8.0             "docker-entrypoint.s…"   db              40 minutes ago   Up 40 minutes (healthy)   3306/tcp, 33060/tcp
+basic-mautic_cron-1     basic-mautic_cron     "/entrypoint.sh apac…"   mautic_cron     40 minutes ago   Up 39 minutes             80/tcp
+basic-mautic_web-1      basic-mautic_web      "/entrypoint.sh apac…"   mautic_web      40 minutes ago   Up 40 minutes (healthy)   0.0.0.0:8001->80/tcp, :::8001->80/tcp
+basic-mautic_worker-1   basic-mautic_worker   "/entrypoint.sh apac…"   mautic_worker   40 minutes ago   Up 27 minutes             80/tcp
+```
+
+### Getting the container logs
+
+Perhaps you want to see how the `mautic_cron` container is working. Or debug why some command is not working perhaps. In that case execute
+
+`docker compose logs mautic_cron`
+
+You can do the same for any of the containers that you get from the `docker compose ps` command above.
+
+### Executing a command in a container
+
+The best way is to log inside the container with a command like
+
+`docker compose exec -it -u www-data mautic_cron bash`
+
+Notice that the user, host and folder changed in your next line in the terminal. It means you are inside the container. Here is how the output looks like:
+
+Notice you are in the `docroot` directory. That's the directory where the publicly accessible files are. If you want to run some `bin/console` command for example, you have to go one directory up with `cd ..`.
+
+Example:
+```
+root@mautic-vps:/var/www# docker compose exec -it -u www-data mautic_cron bash
+www-data@b465afe49214:~/html/docroot$ cd ..
+www-data@b465afe49214:~/html$ php bin/console cache:clear
+
+ // Clearing the cache for the prod environment with debug false                                                        
+
+ [OK] Cache for the "prod" environment (debug=false) was successfully cleared.                                          
+
+www-data@b465afe49214:~/html$ exit
+exit
+root@mautic-vps:/var/www#
+```
+
 
 ## Scaling
 
@@ -164,5 +239,5 @@ The links to [Digital Ocean](https://m.do.co/c/d0ce234a41be) in this readme are 
 - [ ] Make it possible to install multiple Mautic instances to the same VPS.
 - [ ] Load ballancer.
 - [ ] MySql replica.
-- [ ] Download the setup-dc.log from the droplet to GH Action files for easier inspection.
-- [ ] Make the crontab configurable in this repository.
+- [x] Download the setup-dc.log from the droplet to GH Action files for easier inspection.
+- [x] Make the crontab configurable in this repository.
