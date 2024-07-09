@@ -57,9 +57,7 @@ services:
         dockerfile: Dockerfile
       links:
         - db:mysql
-      volumes:
-        - *mautic-volumes
-        - ./cron/mautic:/etc/cron.d/mautic
+      volumes: *mautic-volumes
       environment:
         - DOCKER_MAUTIC_ROLE=mautic_cron
       env_file:
