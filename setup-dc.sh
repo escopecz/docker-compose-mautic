@@ -1,6 +1,6 @@
 cd /var/www
 docker compose build
-docker compose up -d mautic_web
+docker compose up -d db --wait && docker compose up -d mautic_web --wait
 
 echo "## Wait for basic-mautic_web-1 container to be fully running"
 while ! docker exec basic-mautic_web-1 sh -c 'echo "Container is running"'; do
