@@ -14,13 +14,13 @@ jobs:
       uses: escopecz/mautic-do-action@0.2.0
       with:
         vps-name: ${{ github.event.inputs.vps_name || vars.VPS_NAME || format('mautic-{0}', github.ref_name) }}
-        vps-size: ${{ github.event.inputs.vps_size || 's-1vcpu-1gb' }}
-        vps-region: 'nyc1'
-        domain: ${{ vars.DOMAIN || '' }}
+        vps-size: 's-1vcpu-1gb'
+        vps-region: 'ams3'
+        domain: ''
         email: ${{ vars.EMAIL_ADDRESS }}
         mautic-password: ${{ secrets.MAUTIC_PASSWORD }}
-        mysql-password: ${{ secrets.MYSQL_PASSWORD || secrets.MAUTIC_PASSWORD }}
-        mysql-root-password: ${{ secrets.MYSQL_ROOT_PASSWORD || secrets.MAUTIC_PASSWORD }}
+        mysql-password: ${{ secrets.MYSQL_PASSWORD }}
+        mysql-root-password: ${{ secrets.MYSQL_ROOT_PASSWORD }}
         digitalocean-token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
         mautic-port: '8001'
