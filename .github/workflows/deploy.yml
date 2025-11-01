@@ -18,7 +18,6 @@ jobs:
         vps-region: 'ams3'
         domain: ''
         email: ${{ vars.EMAIL_ADDRESS }}
-        plugins: ${{ secrets.GITHUB_TOKEN }}@github.com/chimpino/stripe-plugin/archive/refs/heads/6.x.zip
         mautic-password: ${{ secrets.MAUTIC_PASSWORD }}
         mysql-password: ${{ secrets.MYSQL_PASSWORD }}
         mysql-root-password: ${{ secrets.MYSQL_ROOT_PASSWORD }}
