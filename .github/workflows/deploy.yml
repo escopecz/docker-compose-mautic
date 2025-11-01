@@ -11,7 +11,7 @@ jobs:
 
     steps:
     - name: Deploy Mautic
-      uses: escopecz/mautic-do-action@0.3.2
+      uses: escopecz/mautic-do-action@0.3.3
       with:
         vps-name: ${{ github.event.inputs.vps_name || vars.VPS_NAME || format('mautic-{0}', github.ref_name) }}
         vps-size: 's-1vcpu-1gb'
@@ -25,4 +25,4 @@ jobs:
         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
         mautic-port: '8001'
         plugins: |
-            https://github.com/chimpino/stripe-plugin/archive/refs/heads/6.x.zip?directory=StripePlugin&token=${{ secrets.CHIMPINO_GITHUB_TOKEN }}
+            https://github.com/chimpino/stripe-plugin/archive/refs/heads/6.x.zip?directory=StripeBundle&token=${{ secrets.CHIMPINO_GITHUB_TOKEN }}
