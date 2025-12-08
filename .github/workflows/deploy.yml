@@ -11,10 +11,10 @@ jobs:
 
     steps:
     - name: Deploy Mautic
-      uses: escopecz/mautic-do-action@0.3.4
+      uses: escopecz/mautic-do-action@0.4.0
       with:
         vps-name: ${{ github.event.inputs.vps_name || vars.VPS_NAME || format('mautic-{0}', github.ref_name) }}
-        vps-size: 's-1vcpu-1gb'
+        vps-size: 's-1vcpu-2gb'
         vps-region: 'ams3'
         domain: 'm.veetr.com'
         email: ${{ vars.EMAIL_ADDRESS }}
