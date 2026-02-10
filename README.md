@@ -47,6 +47,36 @@ Push to `main` branch and deployment runs automatically.
 - **🎨 Extensible** - Custom themes and plugins via Composer
 - **👥 Team-friendly** - GitHub collaboration and audit trail
 
+## 🐳 Standalone Docker Compose
+
+For users who prefer to deploy without GitHub Actions:
+
+1. **Copy the environment file**:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. **Configure your environment** (edit `.env`):
+   - Set strong passwords for `MYSQL_PASSWORD` and `MYSQL_ROOT_PASSWORD`
+   - Adjust `MAUTIC_PORT` if needed (default: 8001)
+
+3. **Create the Mautic environment file** (`.mautic_env`):
+   ```bash
+   cat > .mautic_env << EOF
+   MAUTIC_DB_HOST=db
+   MAUTIC_DB_NAME=mautic_db
+   MAUTIC_DB_USER=mautic_db_user
+   MAUTIC_DB_PASSWORD=changeme
+   EOF
+   ```
+
+4. **Start the services**:
+   ```bash
+   docker compose up -d
+   ```
+
+All containers are configured with `restart: unless-stopped` to automatically restart after system reboots.
+
 ## 🔗 Resources
 
 - **📖 Complete Documentation**: https://github.com/marketplace/actions/deploy-mautic-to-digitalocean
