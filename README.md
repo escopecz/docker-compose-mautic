@@ -57,7 +57,7 @@ For users who prefer to deploy without GitHub Actions:
    ```
 
 2. **Configure your environment** (edit `.env`):
-   - Set strong passwords for `MYSQL_PASSWORD` and `MYSQL_ROOT_PASSWORD`
+   - **IMPORTANT**: Set strong passwords for `MYSQL_PASSWORD` and `MYSQL_ROOT_PASSWORD`
    - Adjust `MAUTIC_PORT` if needed (default: 8001)
 
 3. **Create the Mautic environment file** (`.mautic_env`):
@@ -66,9 +66,10 @@ For users who prefer to deploy without GitHub Actions:
    MAUTIC_DB_HOST=db
    MAUTIC_DB_NAME=mautic_db
    MAUTIC_DB_USER=mautic_db_user
-   MAUTIC_DB_PASSWORD=changeme
+   MAUTIC_DB_PASSWORD=YOUR_SECURE_PASSWORD_HERE
    EOF
    ```
+   Replace `YOUR_SECURE_PASSWORD_HERE` with the same password you set for `MYSQL_PASSWORD` in `.env`
 
 4. **Start the services**:
    ```bash

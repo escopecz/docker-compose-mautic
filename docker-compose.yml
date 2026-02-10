@@ -28,8 +28,6 @@ services:
 
   mautic_web:
     image: mautic/mautic:${MAUTIC_VERSION:-6.0.5-apache}
-    links:
-      - db:mysql
     ports:
       - ${MAUTIC_PORT:-8001}:80
     volumes: *mautic-volumes
@@ -53,8 +51,6 @@ services:
 
   mautic_cron:
     image: mautic/mautic:${MAUTIC_VERSION:-6.0.5-apache}
-    links:
-      - db:mysql
     volumes: *mautic-volumes
     environment:
       - DOCKER_MAUTIC_ROLE=mautic_cron
@@ -69,8 +65,6 @@ services:
 
   mautic_worker:
     image: mautic/mautic:${MAUTIC_VERSION:-6.0.5-apache}
-    links:
-      - db:mysql
     volumes: *mautic-volumes
     environment:
       - DOCKER_MAUTIC_ROLE=mautic_worker
