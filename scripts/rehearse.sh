@@ -33,12 +33,17 @@ $ready
 echo 'Restoring database backup.'
 gzip -dc "$recovery/db.sql.gz" | docker exec -i rehearsal-db sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD"'
 console() {
-  docker run --rm --network rehearsal --env-file "$recovery/.mautic_env" --user 33:33 -v "$1:/var/www/html" -w /var/www/html --entrypoint php "$2" "${@:3}"
+  docker run --rm --network rehearsal --env-file "$recovery/.mautic_env" --user 33:33 \
+    -v "$1:/var/www/html" -v "$1/config:/var/www/html/config" \
+    -v "$1/docroot/media/files:/var/www/html/docroot/media/files" \
+    -v "$1/docroot/media/images:/var/www/html/docroot/media/images" \
+    -v "$1/var/logs:/var/www/html/var/logs" \
+    -w /var/www/html --entrypoint php "$2" "${@:3}"
 }
 sudo mkdir -p "$old/var/cache" "$old/var/logs"
 sudo chown -R 33:33 "$old"
 console "$old" "$old_image" bin/console --version
-console "$old" "$old_image" bin/console doctrine:query:sql 'SELECT 1' --no-interaction
+console "$old" "$old_image" bin/console doctrine:query:sql 'SELECT COUNT(*) FROM users' --no-interaction
 # Official M7 image supplies the complete Composer installation and compiled assets.
 id=$(docker create "$TARGET_IMAGE")
 docker cp "$id:/var/www/html/." "$new/"
@@ -59,12 +64,15 @@ console "$new" "$TARGET_IMAGE" bin/console mautic:plugins:install --no-interacti
 console "$new" "$TARGET_IMAGE" bin/console cache:clear --no-interaction
 console "$new" "$TARGET_IMAGE" bin/console --version | grep 'Mautic 7.2.1'
 console "$new" "$TARGET_IMAGE" bin/console debug:router stripe_webhook
-console "$new" "$TARGET_IMAGE" bin/console doctrine:query:sql 'SELECT 1' --no-interaction
+console "$new" "$TARGET_IMAGE" bin/console doctrine:query:sql 'SELECT COUNT(*) FROM users' --no-interaction
 console "$new" "$TARGET_IMAGE" bin/console doctrine:migrations:status --no-interaction
 # Exercise the real web entry point without publishing a port or enabling cron.
 docker run -d --name rehearsal-web --network rehearsal --env-file "$recovery/.mautic_env" \
   -e DOCKER_MAUTIC_ROLE=mautic_web -e DOCKER_MAUTIC_RUN_MIGRATIONS=false \
-  -v "$new:/var/www/html" "$TARGET_IMAGE" >/dev/null
+  -v "$new:/var/www/html" -v "$new/config:/var/www/html/config" \
+  -v "$new/docroot/media/files:/var/www/html/docroot/media/files" \
+  -v "$new/docroot/media/images:/var/www/html/docroot/media/images" \
+  -v "$new/var/logs:/var/www/html/var/logs" "$TARGET_IMAGE" >/dev/null
 ready=false
 for attempt in $(seq 1 60); do
   if docker exec rehearsal-web curl --fail --silent --max-time 5 -o /dev/null http://127.0.0.1/s/login; then ready=true; break; fi
