@@ -1,7 +1,17 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 umask 077
-trap 'result=$?; if (( result != 0 )); then echo "Rehearsal failed at line $LINENO"; docker logs rehearsal-db 2>&1 || true; docker logs rehearsal-web 2>&1 || true; fi; exit "$result"' EXIT
+diagnostics() {
+  result=$?
+  if (( result != 0 )); then
+    echo "Rehearsal failed; private application diagnostics follow."
+    find "$RUNNER_TEMP/app-new/var/logs" -maxdepth 1 -type f -exec tail -n 100 {} + || true
+    docker logs rehearsal-db 2>&1 || true
+    docker logs rehearsal-web 2>&1 || true
+  fi
+  exit "$result"
+}
+trap diagnostics EXIT
 recovery=$RUNNER_TEMP/recovery
 old=$RUNNER_TEMP/app-old
 new=$RUNNER_TEMP/app-new
