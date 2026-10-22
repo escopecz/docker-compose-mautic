@@ -1,28 +1,87 @@
-name: Deploy Mautic to DigitalOcean
-
+name: Upgrade existing Mautic veetr-v2
 on:
   push:
-    branches:
-      - '*'
-
+    branches: [veetr-v2]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: mautic-veetr-v2-upgrade
+  cancel-in-progress: false
 jobs:
-  deploy:
-    runs-on: ubuntu-latest
-
+  upgrade:
+    if: github.ref == 'refs/heads/veetr-v2'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      TARGET_IMAGE: mautic/mautic@sha256:2d249853dc475ce0b0c2415d09dc43657496047c21b5bfb0a383415673ebf54b
+      MYSQL_IMAGE: mysql@sha256:76f0358884cb92d9a086d24e5671c38048d3fef40f2588703d73eb55392d6b69
+      DEPLOY_HOST: 165.232.83.73
     steps:
-    - name: Deploy Mautic
-      uses: escopecz/mautic-do-action@0.4.0
-      with:
-        vps-name: ${{ github.event.inputs.vps_name || vars.VPS_NAME || format('mautic-{0}', github.ref_name) }}
-        vps-size: 's-1vcpu-2gb'
-        vps-region: 'ams3'
-        domain: 'm.veetr.com'
-        email: ${{ vars.EMAIL_ADDRESS }}
-        mautic-password: ${{ secrets.MAUTIC_PASSWORD }}
-        mysql-password: ${{ secrets.MYSQL_PASSWORD }}
-        mysql-root-password: ${{ secrets.MYSQL_ROOT_PASSWORD }}
-        digitalocean-token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
-        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-        mautic-port: '8001'
-        plugins: |
-            https://github.com/chimpino/stripe-plugin/archive/refs/heads/6.x.zip?directory=StripeBundle&token=${{ secrets.CHIMPINO_GITHUB_TOKEN }}
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: chimpino/stripe-plugin
+          ref: 0aa66ee97411226a9a1d21027fb3910a4330d596
+          token: ${{ secrets.CHIMPINO_GITHUB_TOKEN }}
+          persist-credentials: false
+          path: stripe-plugin
+      - name: Configure scoped SSH connections
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          ssh-keygen -y -f ~/.ssh/id_ed25519 > "$RUNNER_TEMP/deploy.pub"
+          ssh-keygen -q -t ed25519 -N '' -f "$RUNNER_TEMP/transfer"
+          ssh-keygen -q -t ed25519 -N '' -f "$RUNNER_TEMP/test-host"
+          echo '165.232.83.73 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGaRm7II3PTOL5ncrjYgZ6ZhRvuJ6lolt/CwXX/bRbQh' > ~/.ssh/known_hosts
+          printf 'Host *\n  User root\n  IdentityFile ~/.ssh/id_ed25519\n  IdentitiesOnly yes\n  StrictHostKeyChecking yes\n  ConnectTimeout 10\n' > ~/.ssh/config
+          ssh "$DEPLOY_HOST" 'test "$(hostname)" = mautic-veetr-v2'
+      - name: Create isolated temporary DigitalOcean test server
+        env:
+          DIGITALOCEAN_TOKEN: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+        run: python3 scripts/test-droplet.py create
+      - name: Wait for temporary test server
+        run: |
+          printf '%s %s\n' "$TEST_HOST" "$(cat "$RUNNER_TEMP/test-host.pub")" >> ~/.ssh/known_hosts
+          ready=false
+          for attempt in $(seq 1 90); do
+            if ssh "$TEST_HOST" test -f /root/rehearsal-ready 2>/dev/null; then ready=true; break; fi
+            sleep 5
+          done
+          "$ready"
+          ssh "$TEST_HOST" 'umask 077; mkdir -p /root/recovery /root/scripts /root/plugin'
+      - name: Create coherent recovery backup and resume current service
+        run: ssh "$DEPLOY_HOST" bash -s -- "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" < scripts/backup.sh
+      - name: Transfer backup directly between DigitalOcean droplets
+        run: |
+          backup="/root/mautic-upgrade-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          printf '%s %s\n' "$TEST_HOST" "$(cat "$RUNNER_TEMP/test-host.pub")" > "$RUNNER_TEMP/test-known-hosts"
+          scp "$RUNNER_TEMP/transfer" "$RUNNER_TEMP/test-known-hosts" "$DEPLOY_HOST:$backup/"
+          ssh "$DEPLOY_HOST" "chmod 600 '$backup/transfer'; scp -q -i '$backup/transfer' -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile='$backup/test-known-hosts' '$backup/app.tar.gz' '$backup/db.sql.gz' '$backup/.mautic_env' '$backup/runtime-image' '$backup/SHA256SUMS' 'root@$TEST_HOST:/root/recovery/'"
+          ssh "$TEST_HOST" 'cd /root/recovery && sha256sum -c SHA256SUMS'
+          scp scripts/rehearse.sh scripts/preserve-custom.py "$TEST_HOST:/root/scripts/"
+          tar --exclude=.git -czf "$RUNNER_TEMP/plugin.tar.gz" -C stripe-plugin .
+          scp "$RUNNER_TEMP/plugin.tar.gz" "$TEST_HOST:/root/plugin.tar.gz"
+          ssh "$TEST_HOST" 'tar -xzf /root/plugin.tar.gz -C /root/plugin'
+      - name: Rehearse restore and migration with outbound integrations blocked
+        run: |
+          # Detailed diagnostics remain on DigitalOcean, never in public Actions logs.
+          if ! ssh "$TEST_HOST" "cd /root; RUNNER_TEMP=/root GITHUB_STEP_SUMMARY=/root/summary TARGET_IMAGE='$TARGET_IMAGE' MYSQL_IMAGE='$MYSQL_IMAGE' bash scripts/rehearse.sh > /root/recovery/rehearsal.log 2>&1"; then
+            backup="/root/mautic-upgrade-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+            ssh "$DEPLOY_HOST" "scp -q -i '$backup/transfer' -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile='$backup/test-known-hosts' 'root@$TEST_HOST:/root/recovery/rehearsal.log' '$backup/rehearsal.log'"
+            echo 'Rehearsal failed; private diagnostics are in the root-only production backup directory.'
+            exit 1
+          fi
+          echo 'Backup restore and Mautic 7 migration rehearsal passed.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Remove temporary transfer key from production
+        if: always()
+        run: |
+          ssh "$DEPLOY_HOST" "test ! -f '/root/mautic-upgrade-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT/transfer' || shred -u '/root/mautic-upgrade-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT/transfer'"
+      - name: Delete temporary DigitalOcean test server
+        if: always()
+        env:
+          DIGITALOCEAN_TOKEN: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+        run: python3 scripts/test-droplet.py delete
