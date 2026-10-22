@@ -7,13 +7,20 @@ run=${1:?run id}
 [[ $run =~ ^[0-9]+-[0-9]+$ ]]
 : "${TARGET_IMAGE:?}" "${MYSQL_IMAGE:?}"
 cd /var/www
+wait_cron() {
+  for attempt in $(seq 1 30); do
+    if docker exec mautic_cron pgrep -x cron >/dev/null 2>&1; then return 0; fi
+    sleep 2
+  done
+  return 1
+}
 version=$(docker exec -w /var/www/html mautic_web php bin/console --version)
 if [[ $version == 'Mautic 7.2.1 '* ]]; then
   [[ $(docker inspect mautic_web --format '{{.Config.Image}}') == "$TARGET_IMAGE" ]]
   [[ $(docker inspect mautic_db --format '{{.Config.Image}}') == "$MYSQL_IMAGE" ]]
   docker compose -p www up -d db mautic mautic_cron
   docker exec mautic_cron php -r 'if (version_compare(PHP_VERSION,"8.3.36","<")) exit(1);'
-  docker exec mautic_cron sh -c 'pgrep -x cron'
+  wait_cron
   curl -fsS --max-time 10 -H "Host: m.veetr.com" -H "X-Forwarded-Proto: https" -o /dev/null http://127.0.0.1:8001/s/login
   echo 'Target Mautic version is already installed; verified web and cron without repeating migration.'
   exit 0
@@ -105,6 +112,6 @@ committed=true
 systemctl start nginx
 docker compose -p www up -d mautic_cron
 docker exec mautic_cron php -r 'if (version_compare(PHP_VERSION,"8.3.36","<")) exit(1); echo PHP_VERSION,PHP_EOL;'
-docker exec mautic_cron sh -c 'pgrep -x cron'
+wait_cron
 console doctrine:migrations:status --no-interaction
 printf 'Upgrade complete. Original volumes and recovery compose retained in %s\n' "$backup"
