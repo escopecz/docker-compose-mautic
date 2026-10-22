@@ -32,7 +32,8 @@ id=$(docker create "$TARGET_IMAGE")
 docker cp "$id:/var/www/html/." "$new/"
 docker rm "$id" >/dev/null
 sudo cp -a "$old/config/." "$new/config/"
-sudo cp -a "$old/docroot/media/." "$new/docroot/media/"
+sudo cp -a "$old/docroot/media/files/." "$new/docroot/media/files/"
+sudo cp -a "$old/docroot/media/images/." "$new/docroot/media/images/"
 # Preserve custom plugins and themes; Composer-managed packages come from M7.
 sudo python3 scripts/preserve-custom.py "$old" "$new"
 sudo cp -a /root/plugin/. "$new/docroot/plugins/StripeBundle/"

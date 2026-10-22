@@ -47,11 +47,15 @@ jobs:
         run: |
           printf '%s %s\n' "$TEST_HOST" "$(cat "$RUNNER_TEMP/test-host.pub")" >> ~/.ssh/known_hosts
           ready=false
-          for attempt in $(seq 1 90); do
-            if ssh "$TEST_HOST" test -f /root/rehearsal-ready 2>/dev/null; then ready=true; break; fi
+          for attempt in $(seq 1 60); do
+            if ssh -o ConnectTimeout=3 "$TEST_HOST" test -f /root/rehearsal-ready 2> "$RUNNER_TEMP/ssh-ready.log"; then ready=true; break; fi
             sleep 5
           done
-          "$ready"
+          if ! "$ready"; then
+            cat "$RUNNER_TEMP/ssh-ready.log"
+            ssh -o ConnectTimeout=3 "$TEST_HOST" 'cloud-init status --long' || true
+            exit 1
+          fi
           ssh "$TEST_HOST" 'umask 077; mkdir -p /root/recovery /root/scripts /root/plugin'
       - name: Create coherent recovery backup and resume current service
         run: ssh "$DEPLOY_HOST" bash -s -- "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" < scripts/backup.sh

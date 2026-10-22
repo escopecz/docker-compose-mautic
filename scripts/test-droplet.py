@@ -26,11 +26,15 @@ if sys.argv[1] == 'create':
         'ssh_authorized_keys': [(root / 'deploy.pub').read_text().strip(), (root / 'transfer.pub').read_text().strip()],
         'ssh_keys': {'ed25519_private': (root / 'test-host').read_text(), 'ed25519_public': (root / 'test-host.pub').read_text().strip()},
         'package_update': True,
-        'packages': ['docker.io', 'docker-compose-v2'],
-        'runcmd': [['systemctl', 'enable', '--now', 'docker'], ['touch', '/root/rehearsal-ready']],
+        'packages': ['docker.io'],
+        'runcmd': [['systemctl', 'restart', 'ssh'], ['systemctl', 'enable', '--now', 'docker'], ['touch', '/root/rehearsal-ready']],
     }
+    public_key = (root / 'deploy.pub').read_text().split()[:2]
+    registered = [key['id'] for key in api('account/keys?per_page=200')['ssh_keys'] if key['public_key'].split()[:2] == public_key]
+    if not registered:
+        raise RuntimeError('The deployment SSH key is not registered in DigitalOcean')
     droplet = api('droplets', 'POST', {'name': name, 'region': 'ams3', 'size': 's-2vcpu-4gb',
-        'image': 'ubuntu-24-04-x64', 'backups': False, 'monitoring': False,
+        'image': 'ubuntu-24-04-x64', 'backups': False, 'monitoring': False, 'ssh_keys': registered,
         'tags': ['mautic-upgrade-rehearsal'], 'user_data': '#cloud-config\n' + json.dumps(cloud)})['droplet']
     export('TEST_DROPLET_ID', droplet['id'])
     for _ in range(90):
