@@ -1,66 +1,37 @@
-# Deploy Mautic 6 to DigitalOcean with GitHub Actions
+# Mautic veetr-v2 upgrade
 
-> **⚡ This repository uses the [Deploy Mautic to DigitalOcean](https://github.com/marketplace/actions/deploy-mautic-to-digitalocean) GitHub Action for one-click deployments.**
+This branch targets **only the existing `mautic-veetr-v2` droplet** (`165.232.83.73`). Its web and cron containers share one application and database. Both host nginx domains proxy to that application. The backend must remain bound to `127.0.0.1:8001`.
 
-Automated deployment of Mautic 6 to DigitalOcean VPS using GitHub Actions. Deploy Mautic in minutes with automatic SSL certificates, monitoring, and maintenance.
+The workflow replaces the old provisioning action. It never creates, resizes, or reconfigures another production droplet. Pushes to other branches do not deploy this branch's workflow.
 
-## 🎥 Mautic Conference Global 2024 
+## Pinned target
 
-My presentation of the previous version of this idea. It's way simpler now as I moved the complexities to a GitHub action.
+- Mautic 7.2.1, official `7.2.1-20261021-apache` image, pinned by digest; PHP 8.3.36.
+- MySQL 8.4, pinned by digest (the Mautic 7 minimum is MySQL 8.4).
+- Stripe plugin: a specific tested commit of `chimpino/stripe-plugin`, not a moving branch archive.
 
-[![Docker Compose for Mautic introduced in the Mautic Conference Global 2024](https://github.com/user-attachments/assets/7841185f-5137-4130-9f23-6871606f4c7d)](https://www.youtube.com/watch?v=lzyjbUKZZlY)
+Changing a runtime image alone does **not** update this installation: the named application volume masks the code supplied by the image.
 
-## 🚀 Quick Start
+## Restore rehearsal
 
-### 1. Fork this Repository
-Click the "Fork" button to create your own copy.
+1. Create a disposable Ubuntu 24.04 DigitalOcean droplet, 2 CPUs / 4 GB RAM, in Amsterdam. It incurs usage charges until deletion.
+2. Briefly stop Mautic web and cron, dump the database, archive the complete mounted application/configuration/media, verify archive checksums, then resume the current application.
+3. Transfer the backup **directly between the DigitalOcean droplets** using a temporary SSH key. Customer data and configuration secrets do not pass through the GitHub runner or become Actions artifacts.
+4. Restore the database and old application on the test droplet, then migrate a copy to the pinned Mautic 7 image and Stripe revision. Application containers use an internal Docker network without outbound access; cron and workers are not started on the test copy.
+5. Retain private failure diagnostics alongside the root-only production backup. Delete the temporary transfer key and test droplet on success or failure. No DigitalOcean snapshot or automatic backup is created for the test droplet.
 
-### 2. Setup Instructions
-**Complete setup guide**: https://github.com/marketplace/actions/deploy-mautic-to-digitalocean
+For another rehearsal against the same snapshot, dispatch the workflow with `recovery_run` set to the verified backup run ID (for example `39860279591-1`). This reuses the backup without stopping production again. Production cutover still requires a fresh backup.
 
-The action's documentation covers:
-- Prerequisites and requirements
-- GitHub Secrets and Variables configuration  
-- DigitalOcean API token setup
-- SSH key generation and setup
-- Domain configuration for SSL
-- VPS sizing recommendations
-- Troubleshooting common issues
+If the runner itself disappears or cleanup reports failure, check DigitalOcean for the exact run-scoped name `mautic-veetr-v2-test-RUN_ID-ATTEMPT`. Do not delete other droplets. The workflow confirms deletion through the API.
 
-### 3. Deploy Mautic
+## Production cutover and recovery
 
-#### Automatic Deployment
-Push to `main` branch and deployment runs automatically.
+The cutover script is deliberately scoped to the observed Mautic 6.0.5 installation. Before migration it obtains another coherent backup, prepares separate application, config, media, and database volumes, and preserves the original volumes and runtime images.
 
-#### Manual Deployment
-1. Go to `Actions` tab → "Deploy Mautic to DigitalOcean"
-2. Click "Run workflow" 
-3. Choose VPS name and size
-4. Deploy!
+During cutover nginx is stopped so the old database and new database cannot receive competing live requests. Database migration, plugin discovery, application version, PHP version, and loopback login checks precede reopening traffic. A failure before traffic reopens restores the original Compose configuration and untouched volumes. After traffic reopens, automatic rollback is disabled to avoid discarding new writes.
 
-## ✨ Features
+Root-only recovery material is stored in `/root/mautic-upgrade-RUN_ID-ATTEMPT-final`. The original `/root/mautic-php-backup-20261022` backup and its rollback image are additional recovery options; the fresh backup is the relevant pre-upgrade recovery point.
 
-- **🚀 One-click deployment** - Deploy in under 10 minutes
-- **🔒 Automatic SSL** - Let's Encrypt certificates with domain setup
-- **📊 Built-in monitoring** - DigitalOcean monitoring + Docker health checks
-- **🔄 Easy updates** - Update Mautic version and redeploy
-- **🎨 Extensible** - Custom themes and plugins via Composer
-- **👥 Team-friendly** - GitHub collaboration and audit trail
+Do not run `docker compose down -v`, prune Docker volumes, or delete the original volumes until the upgrade has been accepted. A rollback after production resumes needs a maintenance window and a decision about handling writes made since cutover.
 
-## 🔗 Resources
-
-- **📖 Complete Documentation**: https://github.com/marketplace/actions/deploy-mautic-to-digitalocean
-- **🛠️ Action Source Code**: https://github.com/escopecz/mautic-do-action
-- **📋 Migration Guide**: [MIGRATION-TO-ACTION.md](MIGRATION-TO-ACTION.md)
-- **🔍 Validation Report**: [VALIDATION-SUMMARY.md](VALIDATION-SUMMARY.md)
-
-## 💬 Support
-
-- **Mautic Community**: https://www.mautic.org/community
-- **Action Issues**: https://github.com/escopecz/mautic-do-action/issues
-- **DigitalOcean Support**: https://www.digitalocean.com/support
-
----
-
-**Prefer managed hosting?** Consider [Mautic's official partners](https://www.mautic.org/mautic-partners) or start a [free trial](https://m.mautic.org/mautic-start-your-trial).
-
+All production changes run through GitHub Actions. Read-only SSH inspection may be used for diagnosis. No production database contents, environment files, backup archives, or detailed application logs should be posted to public job logs or artifacts.

@@ -95,6 +95,26 @@ jobs:
             exit 1
           fi
           echo 'Backup restore and Mautic 7 migration rehearsal passed.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Stage tested application directly on production
+        run: |
+          stage="/root/mautic-stage-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          backup="/root/mautic-upgrade-$BACKUP_RUN"
+          ssh "$TEST_HOST" bash -s < scripts/export-code.sh
+          ssh "$DEPLOY_HOST" "umask 077; mkdir -p '$stage'"
+          scp scripts/backup.sh scripts/upgrade.sh scripts/compose-upgrade.py scripts/preserve-custom.py "$DEPLOY_HOST:$stage/"
+          ssh "$DEPLOY_HOST" "scp -q -i '$backup/transfer' -o BatchMode=yes -o ConnectTimeout=10 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile='$backup/test-known-hosts' 'root@$TEST_HOST:/root/code.tar.gz' 'root@$TEST_HOST:/root/CODE_SHA256SUMS' '$stage/' && mv '$stage/CODE_SHA256SUMS' '$stage/SHA256SUMS'"
+      - name: Upgrade production with fresh backup and automatic pre-traffic rollback
+        run: |
+          stage="/root/mautic-stage-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          if ! ssh "$DEPLOY_HOST" "TARGET_IMAGE='$TARGET_IMAGE' MYSQL_IMAGE='$MYSQL_IMAGE' bash '$stage/upgrade.sh' '$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT' > '$stage/upgrade.log' 2>&1"; then
+            echo 'Production upgrade did not complete; root-only diagnostics are in the production stage directory.'
+            exit 1
+          fi
+          echo 'Production upgrade and internal health checks completed.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Verify public Mautic HTTPS login page
+        run: |
+          curl --fail --silent --show-error --max-time 30 --retry 4 --retry-delay 5 --output "$RUNNER_TEMP/login.html" https://m.veetr.com/s/login
+          grep -q 'name="_username"' "$RUNNER_TEMP/login.html"
       - name: Remove temporary transfer key from production
         if: always()
         run: |

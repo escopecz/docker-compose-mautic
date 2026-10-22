@@ -75,7 +75,7 @@ docker run -d --name rehearsal-web --network rehearsal --env-file "$recovery/.ma
   -v "$new/var/logs:/var/www/html/var/logs" "$TARGET_IMAGE" >/dev/null
 ready=false
 for attempt in $(seq 1 60); do
-  if docker exec rehearsal-web curl --fail --silent --max-time 5 -o /dev/null http://127.0.0.1/s/login; then ready=true; break; fi
+  if docker exec rehearsal-web sh -c 'curl --fail --silent --max-time 5 -H "Host: m.veetr.com" -H "X-Forwarded-Proto: https" -o /tmp/rehearsal-login.html http://127.0.0.1/s/login && grep -q "name=\"_username\"" /tmp/rehearsal-login.html'; then ready=true; break; fi
   sleep 2
 done
 $ready
