@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 umask 077
+trap 'result=$?; if (( result != 0 )); then echo "Rehearsal failed at line $LINENO"; docker logs rehearsal-db 2>&1 || true; docker logs rehearsal-web 2>&1 || true; fi; exit "$result"' EXIT
 recovery=$RUNNER_TEMP/recovery
 old=$RUNNER_TEMP/app-old
 new=$RUNNER_TEMP/app-new
@@ -15,11 +16,12 @@ docker network create --internal rehearsal >/dev/null
 docker run -d --name rehearsal-db --network rehearsal --network-alias mysql --network-alias db --env-file "$recovery/.mautic_env" "$MYSQL_IMAGE" >/dev/null
 ready=false
 for i in $(seq 1 90); do
-  if docker exec rehearsal-db sh -c 'mysqladmin ping -uroot -p"$MYSQL_ROOT_PASSWORD" --silent' >/dev/null 2>&1; then ready=true; break; fi
+  if docker exec rehearsal-db sh -c 'mysql --protocol=TCP -h127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SELECT 1"' >/dev/null 2>&1; then ready=true; break; fi
   sleep 2
 done
 $ready
-gzip -dc "$recovery/db.sql.gz" | docker exec -i rehearsal-db sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD"' 2>/dev/null
+echo 'Restoring database backup.'
+gzip -dc "$recovery/db.sql.gz" | docker exec -i rehearsal-db sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD"'
 console() {
   docker run --rm --network rehearsal --env-file "$recovery/.mautic_env" --user 33:33 -v "$1:/var/www/html" -w /var/www/html --entrypoint php "$2" "${@:3}"
 }
@@ -43,9 +45,21 @@ console "$new" "$TARGET_IMAGE" -r 'if (version_compare(PHP_VERSION,"8.3.36","<")
 console "$new" "$TARGET_IMAGE" bin/console cache:clear --no-interaction
 console "$new" "$TARGET_IMAGE" bin/console mautic:update:apply --finish --no-interaction
 console "$new" "$TARGET_IMAGE" bin/console doctrine:migrations:migrate --no-interaction
+console "$new" "$TARGET_IMAGE" bin/console mautic:plugins:install --no-interaction
 console "$new" "$TARGET_IMAGE" bin/console cache:clear --no-interaction
 console "$new" "$TARGET_IMAGE" bin/console --version | grep 'Mautic 7.2.1'
 console "$new" "$TARGET_IMAGE" bin/console debug:router stripe_webhook
 console "$new" "$TARGET_IMAGE" bin/console doctrine:query:sql 'SELECT 1' --no-interaction
 console "$new" "$TARGET_IMAGE" bin/console doctrine:migrations:status --no-interaction
+# Exercise the real web entry point without publishing a port or enabling cron.
+docker run -d --name rehearsal-web --network rehearsal --env-file "$recovery/.mautic_env" \
+  -e DOCKER_MAUTIC_ROLE=mautic_web -e DOCKER_MAUTIC_RUN_MIGRATIONS=false \
+  -v "$new:/var/www/html" "$TARGET_IMAGE" >/dev/null
+ready=false
+for attempt in $(seq 1 60); do
+  if docker exec rehearsal-web curl --fail --silent --max-time 5 -o /dev/null http://127.0.0.1/s/login; then ready=true; break; fi
+  sleep 2
+done
+$ready
+docker stop rehearsal-web >/dev/null
 printf 'Restored M6 and migrated M7 with Stripe successfully. Production remains on its original application.\n' >> "$GITHUB_STEP_SUMMARY"
