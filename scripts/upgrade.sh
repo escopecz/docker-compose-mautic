@@ -41,6 +41,10 @@ for obsolete in mautic/mautic:6.0.5-apache e209460f8a1e; do
 done
 docker pull "$TARGET_IMAGE"
 docker pull "$MYSQL_IMAGE"
+if [[ $(df --output=avail -B1 / | tail -1) -le 3200000000 ]]; then
+  # Bound archived system logs only; preserve application logs and recovery data.
+  journalctl --vacuum-size=1G
+fi
 [[ $(df --output=avail -B1 / | tail -1) -gt 3200000000 ]] || { echo 'Insufficient free disk for parallel recovery volumes'; exit 1; }
 committed=false
 maintenance=false
