@@ -53,8 +53,8 @@ sudo mkdir -p "$new/var/cache" "$new/var/logs"
 sudo chown -R 33:33 "$new"
 console "$new" "$TARGET_IMAGE" -r 'if (version_compare(PHP_VERSION,"8.3.36","<")) exit(1); echo "PHP ",PHP_VERSION,PHP_EOL;'
 console "$new" "$TARGET_IMAGE" bin/console cache:clear --no-interaction
+console "$new" "$TARGET_IMAGE" bin/console doctrine:migrations:migrate --no-interaction -vv
 console "$new" "$TARGET_IMAGE" bin/console mautic:update:apply --finish --no-interaction
-console "$new" "$TARGET_IMAGE" bin/console doctrine:migrations:migrate --no-interaction
 console "$new" "$TARGET_IMAGE" bin/console mautic:plugins:install --no-interaction
 console "$new" "$TARGET_IMAGE" bin/console cache:clear --no-interaction
 console "$new" "$TARGET_IMAGE" bin/console --version | grep 'Mautic 7.2.1'
