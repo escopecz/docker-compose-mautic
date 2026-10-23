@@ -52,7 +52,7 @@ def healthy():
         except subprocess.CalledProcessError:pass
         time.sleep(5)
     else:raise RuntimeError('Cronfig login did not return HTTP 200')
-    for path in ['/form/generate.js?id=1','/form/generate.js?id=9']:
+    for path in ['/form/generate.js?id=1','/form/generate.js?id=9','/form/1','/form/9']:
         if http(path)!='200':raise RuntimeError('Cronfig form did not return HTTP 200')
     version=capture(['docker','exec','-w','/var/www/html',container,'php','bin/console','--version'])
     if not version.startswith('Mautic 7.2.1'):raise RuntimeError('Unexpected application version')
@@ -69,6 +69,7 @@ if a.action=='stage':
     root.mkdir(parents=True,exist_ok=True);(root/'release').write_text(a.release+'\n')
     for name in ['config','media','plugins','themes']:
         shutil.copytree(payload/name,root/name,dirs_exist_ok=True)
+    run(['python3',str(repo/'scripts/cronfig-theme-compat.py'),str(root/'themes')])
     (root/'logs').mkdir(exist_ok=True)
     shutil.copytree(repo/'deployment/cronfig',root/'runtime',dirs_exist_ok=True)
     for name in ['config','media','logs']:
