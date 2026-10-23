@@ -116,8 +116,12 @@ elif a.action=='activate':
         nginx(True)
         # From this point the new database may contain writes: never auto-restore it.
         (root/'activated.json').write_text(json.dumps({'release':a.release,'time':time.time()})+'\n')
-        status=capture(['curl','-sS','--resolve','m.cronfig.io:443:127.0.0.1','https://m.cronfig.io/s/login','-o','/dev/null','-w','%{http_code}'])
-        if status!='200':raise RuntimeError('Public HTTPS proxy did not return HTTP 200')
+        # nginx reload is asynchronous; old workers may briefly return maintenance.
+        for attempt in range(15):
+            status=capture(['curl','-sS','--max-time','30','--resolve','m.cronfig.io:443:127.0.0.1','https://m.cronfig.io/s/login','-o','/dev/null','-w','%{http_code}'])
+            if status=='200':break
+            time.sleep(1)
+        else:raise RuntimeError('Public HTTPS proxy returned HTTP '+status)
     except Exception:
         nginx(False)
         raise

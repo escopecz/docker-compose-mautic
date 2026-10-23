@@ -7,4 +7,6 @@ test -s /var/www/html/config/local.php
 rm -rf -- /var/www/html/var/cache/prod
 mkdir -p /var/www/html/var/cache /var/www/html/var/logs
 chown -R www-data:www-data /var/www/html/var/cache /var/www/html/var/logs
+# Warm once before opening HTTP: parallel cold requests otherwise compete for RAM.
+su -s /bin/sh www-data -c 'php -d memory_limit=256M /var/www/html/bin/console cache:warmup --env=prod --no-debug --no-optional-warmers'
 exec apache2-foreground
