@@ -13,3 +13,5 @@ Unlike Cronfig, authoritative DNS for `chimpino.com` is at GoDaddy. Issue the ne
 After activation and verification, update only the `m.chimpino.com` A record at GoDaddy to `165.232.83.73`. Preserve all other records. Once public resolution reaches the destination, use `renew-certificate` to switch renewal to webroot and validate a dry run. Existing canceled Cronfig schedules remain paused until a separate restart decision after cutover.
 
 After the new instance accepts writes, never automatically restore the old database. Maintenance closes only the selected hostname while preserving its data. Retain the original source and private checkpoints until acceptance.
+
+The Mautic 7.2.1 image omits the compiled GrapesJS editor files. Build the editor from the matching source with `composer gjs-build` and include its `Assets/library/js/dist` directory as `grapesjs-dist` in the release payload and checksum manifest. Deployment copies these files into `runtime/grapesjs-dist` and mounts them read-only, preserving them across container recreation. Existing installations received the matching tested assets on 2026-10-23.

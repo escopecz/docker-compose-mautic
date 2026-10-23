@@ -11,6 +11,7 @@ r=str(Path(a.root).resolve())
 image=json.loads((Path(__file__).resolve().parents[1]/'instances/chimpino.json').read_text())['image']
 mounts=[f'{r}/config:/var/www/html/config',f'{r}/media/files:/var/www/html/docroot/media/files',f'{r}/media/images:/var/www/html/docroot/media/images',f'{r}/logs:/var/www/html/var/logs',f'{r}/plugins/CronfigBundle:/var/www/html/docroot/plugins/CronfigBundle:ro',f'{r}/runtime/entrypoint.sh:/opt/chimpino-entrypoint.sh:ro',f'{r}/runtime/apache-workers.conf:/etc/apache2/conf-enabled/zz-chimpino-workers.conf:ro',f'{r}/runtime/php.ini:/usr/local/etc/php/conf.d/zz-chimpino.ini:ro']
 mounts.append(f'{r}/plugins/StripeBundle:/var/www/html/docroot/plugins/StripeBundle:ro')
+mounts.append(f'{r}/runtime/grapesjs-dist:/var/www/html/docroot/plugins/GrapesJsBuilderBundle/Assets/library/js/dist:ro')
 for name in ('coffee','nature','Mauve'):
     mounts.append(f'{r}/themes/{name}:/var/www/html/docroot/themes/{name}:ro')
 net='chimpino-prod-rehearsal' if a.local else 'mautic-db-chimpino'

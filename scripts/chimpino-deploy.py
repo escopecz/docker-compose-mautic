@@ -54,6 +54,12 @@ def healthy():
     else:raise RuntimeError('Chimpino login did not return HTTP 200')
     for path in ['/form/generate.js?id=1','/form/generate.js?id=2','/form/1','/form/2']:
         if http(path)!='200':raise RuntimeError('Chimpino form did not return HTTP 200')
+    asset_path='/plugins/GrapesJsBuilderBundle/Assets/library/js/dist/'
+    manifest=json.loads(capture(['docker','exec',container,'cat','/var/www/html/docroot'+asset_path+'manifest.json']))
+    for logical in ('builder.js','builder.css'):
+        filename=manifest.get(logical,'')
+        if not filename or Path(filename).name!=filename or http(asset_path+filename)!='200':
+            raise RuntimeError('GrapesJS editor assets missing or inaccessible')
     version=capture(['docker','exec','-w','/var/www/html',container,'php','bin/console','--version'])
     if not version.startswith('Mautic 7.2.1'):raise RuntimeError('Unexpected application version')
     run(['curl','-fsS','--max-time','30','-o','/dev/null','https://m.veetr.com/s/login'])
@@ -63,6 +69,7 @@ if a.action=='stage':
     if root.exists() and (not (root/'release').exists() or (root/'release').read_text().strip()!=a.release):raise SystemExit('Unowned target directory')
     if shutil.disk_usage('/').free<1_500_000_000:raise SystemExit('Insufficient disk headroom')
     run(['sha256sum','--check','SHA256SUMS'],cwd=payload)
+    if not (payload/'grapesjs-dist/manifest.json').is_file():raise SystemExit('Missing GrapesJS build in release payload')
     if not mysql('SELECT VERSION();',True).startswith('8.4.'):raise SystemExit('Unexpected shared MySQL version')
     existing=mysql("SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name='mautic_chimpino';",True)
     if existing!='0':raise SystemExit('Target schema already exists; preserve it and inspect before retry')
@@ -70,6 +77,9 @@ if a.action=='stage':
     for name in ['config','media','plugins','themes']:
         shutil.copytree(payload/name,root/name,dirs_exist_ok=True)
     run(['python3',str(repo/'scripts/chimpino-theme-compat.py'),str(root/'themes')])
+    # The pinned upstream image omits compiled GrapesJS assets. Package these
+    # from the matching Mautic source build alongside the private release payload.
+    shutil.copytree(payload/'grapesjs-dist',root/'runtime/grapesjs-dist',dirs_exist_ok=True)
     (root/'logs').mkdir(exist_ok=True)
     shutil.copytree(repo/'deployment/chimpino',root/'runtime',dirs_exist_ok=True)
     for name in ['config','media','logs']:
