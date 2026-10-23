@@ -1,0 +1,51 @@
+--- a/Controller/PublicController.php
++++ b/Controller/PublicController.php
+@@ -46,7 +46,7 @@
+         
+         if ($config['secret_key'] !== $secretKey) {
+             $response->setStatusCode(Response::HTTP_FORBIDDEN);
+-            $logger->log('error', 'Cronfig: secret key mismatch: '.$config['secret_key'].' != '.$secretKey);
++            $logger->log('error', 'Cronfig: secret key mismatch');
+             $response->setContent('error: secret key mismatch');
+ 
+             return $response;
+@@ -66,9 +66,12 @@
+             $output = new BufferedOutput();
+             $app    = new Application($kernel);
+             $app->setAutoExit(false);
+-            $app->run($input, $output);
++            $exitCode = $app->run($input, $output);
+ 
+-            $output = "SUCCESS\n\n{$output->fetch()}";
++            $output = ($exitCode === 0 ? "SUCCESS" : "ERROR")."\n\n{$output->fetch()}";
++            if ($exitCode !== 0) {
++                $response->setStatusCode(Response::HTTP_INTERNAL_SERVER_ERROR);
++            }
+         } catch (\Exception $exception) {
+             $output = $exception->getMessage();
+             $response->setStatusCode(500);
+--- a/composer.json
++++ b/composer.json
+@@ -4,12 +4,20 @@
+     "type": "mautic-plugin",
+     "version": "2.0",
+     "license": "GPL-3.0-or-later",
+-    "keywords": ["mautic","plugin","cronfig","cron","config","cronjob","cronjobs"],
++    "keywords": [
++        "mautic",
++        "plugin",
++        "cronfig",
++        "cron",
++        "config",
++        "cronjob",
++        "cronjobs"
++    ],
+     "extra": {
+         "install-directory-name": "CronfigBundle"
+     },
+     "require": {
+         "php": ">=8.0.0",
+-        "mautic/core-lib": "^5.0"
++        "mautic/core-lib": "^7.2"
+     }
+-}+}

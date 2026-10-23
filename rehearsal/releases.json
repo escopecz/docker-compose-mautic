@@ -1,0 +1,5 @@
+{
+  "5.2.11": {"url": "https://github.com/mautic/mautic/releases/download/5.2.11/5.2.11.zip", "sha256": "fc1d741920c3e4d84e609f395aef84b43e9d287d8d73bf42dfb882092c5ffc07"},
+  "6.0.9": {"url": "https://github.com/mautic/mautic/releases/download/6.0.9/6.0.9.zip", "sha256": "aeb7bc2bd3eb6af4ccfca0969619e96dcab3a65a3fa84625234dc4885ce9380f"},
+  "7.2.1": {"url": "https://github.com/mautic/mautic/releases/download/7.2.1/7.2.1.zip", "sha256": "5c86cf1fe8b4f9818232ce8bb755760f502d47846706e9164d144865d031ecbd"}
+}

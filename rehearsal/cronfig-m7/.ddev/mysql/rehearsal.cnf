@@ -1,0 +1,5 @@
+[mysqld]
+event_scheduler=OFF
+innodb_buffer_pool_size=67108864
+performance_schema=OFF
+max_connections=30

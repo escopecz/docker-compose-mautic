@@ -1,0 +1,16 @@
+# Production data and credentials must never enter Git.
+.private/
+.local/
+.env
+.env.*
+!.env.example
+*.sql
+*.sql.gz
+*.tar
+*.tar.gz
+*.dump
+*.pem
+*.key
+__pycache__/
+# Reviewed migration statements contain schema repairs, not database exports.
+!rehearsal/cronfig-fixes/*.sql

@@ -1,0 +1,26 @@
+services:
+  web:
+    cap_add: [NET_ADMIN]
+    ports:
+      - "127.0.0.1:8190:80"
+      - "127.0.0.1:8191:443"
+    networks: !override
+      - isolated
+    extra_hosts: !override []
+    environment:
+      HTTP_PROXY: ""
+      HTTPS_PROXY: ""
+      ALL_PROXY: ""
+  db:
+    networks: !override
+      - isolated
+    command: [mysqld, --event-scheduler=OFF]
+networks:
+  isolated:
+    internal: true
+  default:
+    internal: true
+  ddev_default:
+    name: cronfig-migration-m7-private
+    external: false
+    internal: true

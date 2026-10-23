@@ -1,0 +1,20 @@
+name: cronfig-migration-m7
+type: php
+docroot: ""
+php_version: "8.3"
+webserver_type: apache-fpm
+database:
+  type: mysql
+  version: "8.4"
+composer_version: "2"
+performance_mode: mutagen
+use_dns_when_possible: true
+bind_all_interfaces: false
+host_webserver_port: "8190"
+host_https_port: "8191"
+omit_containers: [ddev-ssh-agent]
+web_environment:
+  - APP_ENV=prod
+  - MAUTIC_ENV=prod
+  - SYMFONY_ENV=prod
+

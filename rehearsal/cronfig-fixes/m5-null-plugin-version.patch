@@ -1,0 +1,11 @@
+--- a/app/bundles/PluginBundle/Helper/ReloadHelper.php
++++ b/app/bundles/PluginBundle/Helper/ReloadHelper.php
+@@ -67,7 +67,7 @@
+         foreach ($installedPlugins as $bundle => $plugin) {
+             if (isset($allPlugins[$bundle])) {
+                 $pluginConfig = $allPlugins[$bundle];
+-                $oldVersion   = $plugin->getVersion();
++                $oldVersion   = $plugin->getVersion() ?? "";
+                 $plugin       = $this->mapConfigToPluginEntity($plugin, $pluginConfig);
+ 
+                 // compare versions to see if an update is necessary

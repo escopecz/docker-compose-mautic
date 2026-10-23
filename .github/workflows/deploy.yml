@@ -1,7 +1,5 @@
-name: Upgrade existing Mautic veetr-v2
+name: Legacy Veetr upgrade (manual only)
 on:
-  push:
-    branches: [veetr-v2]
   workflow_dispatch:
     inputs:
       recovery_run:

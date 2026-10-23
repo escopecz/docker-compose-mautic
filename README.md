@@ -1,8 +1,20 @@
-# Mautic veetr-v2 upgrade
+# Multi-instance Mautic deployment preparation
+
+Local preparation now lives in `instances/`, `infrastructure/`, and `scripts/instances.py`. See [the migration plan](docs/multi-instance-migration.md) for the staged local restore and future cutover design. These tools validate inventory and generate candidate Compose files only: they do not connect to servers or deploy.
+
+```sh
+python3 scripts/instances.py validate
+python3 scripts/instances.py plan --instance cronfig
+python3 -m unittest discover -s tests -v
+```
+
+The legacy workflow is now manual-only in this local revision. Do not dispatch it for the new instances; it still contains the original single-instance assumptions.
+
+## Legacy Veetr upgrade
 
 This branch targets **only the existing `mautic-veetr-v2` droplet** (`165.232.83.73`). Its web and cron containers share one application and database. Both host nginx domains proxy to that application. The backend must remain bound to `127.0.0.1:8001`.
 
-The workflow replaces the old provisioning action. It never creates, resizes, or reconfigures another production droplet. Pushes to other branches do not deploy this branch's workflow.
+The workflow replaces the old provisioning action. It never creates, resizes, or reconfigures another production droplet. Pushes do not trigger this legacy workflow in this revision.
 
 ## Pinned target
 

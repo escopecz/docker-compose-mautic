@@ -1,0 +1,20 @@
+{
+  "id": "cronfig",
+  "domain": "m.cronfig.io",
+  "host": "165.232.83.73",
+  "port": 8002,
+  "database": "mautic_cronfig",
+  "source_version": "4.4.8",
+  "target_version": "7.2.1",
+  "image": "mautic/mautic@sha256:2d249853dc475ce0b0c2415d09dc43657496047c21b5bfb0a383415673ebf54b",
+  "plugins_to_validate": [
+    "CronfigBundle"
+  ],
+  "migration_path": [
+    "4.4.8",
+    "5.2.11",
+    "6.0.9",
+    "7.2.1"
+  ],
+  "status": "preparation-only"
+}
