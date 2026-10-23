@@ -97,6 +97,8 @@ if a.action=='stage':
     (root/'staged.json').write_text(json.dumps({'release':a.release,'verified':True})+'\n')
     print('Cronfig staged in isolated network; original source and existing sites preserved.')
 elif a.action=='activate':
+    if not (root/'release').exists() or (root/'release').read_text().strip()!=a.release:raise SystemExit('Release ownership mismatch')
+    shutil.copytree(repo/'deployment/cronfig',root/'runtime',dirs_exist_ok=True)
     if (root/'activated.json').exists():raise SystemExit('Already activated; use verify')
     if not (root/'staged.json').exists():raise SystemExit('No verified stage')
     proof=json.loads((payload/'source-frozen.json').read_text())
