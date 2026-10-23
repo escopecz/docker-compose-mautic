@@ -29,8 +29,9 @@ def nginx(live):
     cert='/etc/nginx/ssl/cronfig-migration'
     if Path('/etc/letsencrypt/live/m.cronfig.io/fullchain.pem').exists():cert='/etc/letsencrypt/live/m.cronfig.io'
     location='proxy_pass http://127.0.0.1:8002; proxy_set_header Host $host; proxy_set_header X-Forwarded-Proto https; proxy_set_header X-Forwarded-For $remote_addr; proxy_set_header X-Real-IP $remote_addr; proxy_read_timeout 120s;' if live else 'add_header Retry-After 300 always; return 503;'
+    shutil.copyfile(root/'runtime/nginx-logging.conf','/etc/nginx/conf.d/cronfig-logging.conf')
     text=f'''server {{ listen 80; server_name m.cronfig.io; location ^~ /.well-known/acme-challenge/ {{ root /var/www/letsencrypt; }} location / {{ return 301 https://$host$request_uri; }} }}
-server {{ listen 443 ssl; server_name m.cronfig.io; ssl_certificate {cert}/fullchain.pem; ssl_certificate_key {cert}/privkey.pem; include /etc/letsencrypt/options-ssl-nginx.conf; ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; client_max_body_size 25m; location / {{ {location} }} }}
+server {{ listen 443 ssl; server_name m.cronfig.io; access_log /var/log/nginx/cronfig-access.log cronfig_without_query; ssl_certificate {cert}/fullchain.pem; ssl_certificate_key {cert}/privkey.pem; include /etc/letsencrypt/options-ssl-nginx.conf; ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; client_max_body_size 25m; location / {{ {location} }} }}
 '''
     site=Path('/etc/nginx/sites-available/m.cronfig.io');previous=site.read_bytes() if site.exists() else None
     site.write_text(text)
