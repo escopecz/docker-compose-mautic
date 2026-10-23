@@ -1,7 +1,21 @@
-name: Legacy Veetr upgrade (manual only)
+name: Mautic deployment (manual only)
 on:
   workflow_dispatch:
     inputs:
+      instance:
+        description: Target instance
+        type: choice
+        options: [cronfig, legacy-veetr]
+        default: cronfig
+      cronfig_action:
+        description: Cronfig deployment phase
+        type: choice
+        options: [stage, activate, verify, maintenance, renew-certificate]
+        default: stage
+      release:
+        description: Private payload ID already staged directly on DigitalOcean
+        type: string
+        default: 20261023-m7
       recovery_run:
         description: Existing backup run ID to reuse for rehearsal (optional)
         required: false
@@ -13,7 +27,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   upgrade:
-    if: github.ref == 'refs/heads/veetr-v2'
+    if: github.ref == 'refs/heads/veetr-v2' && inputs.instance == 'legacy-veetr'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
@@ -123,3 +137,54 @@ jobs:
         env:
           DIGITALOCEAN_TOKEN: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
         run: python3 scripts/test-droplet.py delete
+
+  cronfig:
+    if: github.ref == 'refs/heads/veetr-v2' && inputs.instance == 'cronfig'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      DEPLOY_HOST: 165.232.83.73
+      RELEASE: ${{ inputs.release }}
+      ACTION: ${{ inputs.cronfig_action }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Validate deployment code
+        run: |
+          python3 -m unittest discover -s tests
+          python3 -m py_compile scripts/cronfig-deploy.py scripts/cronfig-compose.py scripts/cronfig-dump.py
+          [[ "$RELEASE" =~ ^[a-z0-9-]{1,40}$ ]]
+          case "$ACTION" in stage|activate|verify|maintenance|renew-certificate) ;; *) exit 1 ;; esac
+      - name: Configure pinned SSH host
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          echo '165.232.83.73 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGaRm7II3PTOL5ncrjYgZ6ZhRvuJ6lolt/CwXX/bRbQh' > ~/.ssh/known_hosts
+          printf 'Host *\n  User root\n  IdentityFile ~/.ssh/id_ed25519\n  IdentitiesOnly yes\n  StrictHostKeyChecking yes\n  BatchMode yes\n  ConnectTimeout 15\n  ServerAliveInterval 15\n  ServerAliveCountMax 3\n' > ~/.ssh/config
+      - name: Stage deployment code
+        run: |
+          code="/root/cronfig-code-$GITHUB_SHA"
+          ssh "$DEPLOY_HOST" "umask 077; mkdir -p '$code'"
+          tar -czf "$RUNNER_TEMP/code.tar.gz" scripts deployment instances
+          scp "$RUNNER_TEMP/code.tar.gz" "$DEPLOY_HOST:$code/code.tar.gz"
+          ssh "$DEPLOY_HOST" "tar -xzf '$code/code.tar.gz' -C '$code'"
+      - name: Issue certificate on DigitalOcean without transferring its private key
+        if: inputs.cronfig_action == 'stage'
+        env:
+          DIGITALOCEAN_TOKEN: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+        run: python3 scripts/cronfig-certificate.py
+      - name: Deploy only the selected Cronfig phase
+        run: |
+          code="/root/cronfig-code-$GITHUB_SHA"
+          if ! ssh "$DEPLOY_HOST" "python3 '$code/scripts/cronfig-deploy.py' '$ACTION' '$RELEASE' > '$code/$ACTION.log' 2>&1"; then
+            echo 'Cronfig phase failed. Private diagnostics remain on DigitalOcean; traffic was not automatically redirected.'
+            exit 1
+          fi
+          echo "Cronfig $ACTION completed." >> "$GITHUB_STEP_SUMMARY"
+      - name: Move only the m.cronfig.io DNS record after activation
+        if: inputs.cronfig_action == 'activate'
+        env:
+          DIGITALOCEAN_TOKEN: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+        run: python3 scripts/cronfig-dns.py

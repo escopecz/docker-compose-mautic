@@ -17,4 +17,3 @@ web_environment:
   - APP_ENV=prod
   - MAUTIC_ENV=prod
   - SYMFONY_ENV=prod
-

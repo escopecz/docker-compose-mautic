@@ -1,3 +1,5 @@
+See [Cronfig production deployment](docs/cronfig-deployment.md) for the scoped deployment now available through the manual workflow.
+
 # Multi-instance Mautic deployment preparation
 
 Local preparation now lives in `instances/`, `infrastructure/`, and `scripts/instances.py`. See [the migration plan](docs/multi-instance-migration.md) for the staged local restore and future cutover design. These tools validate inventory and generate candidate Compose files only: they do not connect to servers or deploy.
@@ -46,4 +48,4 @@ Root-only recovery material is stored in `/root/mautic-upgrade-RUN_ID-ATTEMPT-fi
 
 Do not run `docker compose down -v`, prune Docker volumes, or delete the original volumes until the upgrade has been accepted. A rollback after production resumes needs a maintenance window and a decision about handling writes made since cutover.
 
-All production changes run through GitHub Actions. Read-only SSH inspection may be used for diagnosis. No production database contents, environment files, backup archives, or detailed application logs should be posted to public job logs or artifacts.
+Production activation runs through GitHub Actions. Private migration payloads are staged directly on DigitalOcean, and the old source is frozen separately by the operator. Read-only SSH inspection may be used for diagnosis. No production database contents, environment files, backup archives, or detailed application logs should be posted to public job logs or artifacts.

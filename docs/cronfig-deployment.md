@@ -1,0 +1,18 @@
+# Cronfig production deployment
+
+The scoped deployment uses the existing `mautic_db` MySQL 8.4 service. It creates only the `mautic_cronfig` schema/user and attaches the database to a new internal network. The existing Veetr schema, storage and services are not migrated or restarted. The original shared-database proposal in `infrastructure/` remains preparatory for future consolidation; do not start a second database from it for this cutover.
+
+The official Mautic image supplies application code. Only the reviewed Cronfig plugin, three additional themes, configuration, uploaded files/images and logs are mounted. The web-only entrypoint avoids the upstream image's unconditional migration-on-start behavior. Cron and workers are not started: existing external Cronfig schedules remain responsible for tasks. SMTP is restored to the original immediate-delivery transport at activation.
+
+Private payloads are transferred directly from the operator's local migration workspace to `/root/cronfig-payload-RELEASE` on DigitalOcean. Neither data nor credentials pass through GitHub Actions. The payload includes verified checksums, the migrated schema, per-instance credentials, stage/live configuration, plugin/media/themes, expected record counts. The single legacy cleanup routine is retained with invoker rights and imported as the scoped database user, never with a root definer. No database events are permitted.
+
+Use the existing manual `deploy.yml` workflow on `veetr-v2`, selecting instance `cronfig` and the intended release ID:
+
+1. `stage`: issue a new certificate on DigitalOcean through a temporary DNS challenge (the private key never leaves the server), verify private payload, create the isolated schema, import with schema-only privileges, start the internal-only web container, check login/forms/counts and the existing Veetr site, and create a maintenance-only hostname. This refuses an existing target schema rather than overwriting it.
+2. Freeze only the old Cronfig installation, retain its original configuration and nginx file, export again and compare the complete source database/files with the rehearsal input. An unchanged verified snapshot can reuse the tested migrated result. Otherwise repeat the migration on the final frozen copy. Transfer the resulting `source-frozen.json` proof directly to the private payload directory.
+3. `activate`: require the final-source proof, verify the running candidate before switching to live configuration, recreate it to rebuild its cache, validate readiness, then reload only the selected nginx hostname. After success the workflow updates only the existing `m.cronfig.io` A record to the destination. Other DNS records are untouched.
+4. `verify`: verify the application and existing Veetr login. Validate public HTTPS and expected form/asset routes after DNS moves. `renew-certificate` enrolls the migrated hostname with the destination's existing Certbot webroot renewal setup.
+
+Before traffic, failed readiness leaves the hostname in maintenance. After activation, never restore the old database automatically: new writes may exist. The `maintenance` phase closes only this hostname and preserves all data for diagnosis. The old frozen source and local migration checkpoints are retained; returning to M4 requires an explicit decision about reconciling any new writes and the old server's blocked network configuration.
+
+The manual legacy Veetr upgrade now requires selecting `legacy-veetr` explicitly. It is not used for Cronfig. The staged application has no outbound network; Docker may not publish its loopback port while it has only an internal network, so stage readiness is checked from inside the container. Activation adds the outbound network and publishes the loopback backend.
