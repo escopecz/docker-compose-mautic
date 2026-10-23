@@ -20,7 +20,10 @@ for name in ['database.sql.gz','application.tar.gz']:
     f=dest/name
     with gzip.open(f,'rb') as stream:
         while stream.read(1024*1024):pass
-    with f.open('rb') as stream:digest=hashlib.file_digest(stream,'sha256').hexdigest()
+    digest_object=hashlib.sha256()
+    with f.open('rb') as stream:
+        for chunk in iter(lambda:stream.read(1024*1024),b''):digest_object.update(chunk)
+    digest=digest_object.hexdigest()
     lines.append(digest+'  '+name);f.chmod(0o600)
 (dest/'SHA256SUMS').write_text('\n'.join(lines)+'\n')
 (dest/'complete').touch()

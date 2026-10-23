@@ -13,6 +13,7 @@ $parameters['db_name']=$database;
 $parameters['db_user']=$database;
 $parameters['db_password']=trim(file_get_contents($passwordFile));
 $parameters['site_url']=$siteUrl;
+$parameters['trusted_hosts']=['^'.preg_quote(parse_url($siteUrl,PHP_URL_HOST),'~').'$','^127\.0\.0\.1$','^localhost$'];
 $parameters['cache_path']='/var/www/html/var/cache';
 $parameters['log_path']='/var/www/html/var/logs';
 $parameters['tmp_path']='/var/www/html/var/tmp';

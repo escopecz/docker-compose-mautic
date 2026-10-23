@@ -1,4 +1,4 @@
-import gzip,json,subprocess,sys,tempfile,unittest
+import gzip,json,os,subprocess,sys,tempfile,unittest
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -30,3 +30,12 @@ class CronfigDeploymentTests(unittest.TestCase):
                 if expected==0:
                     with gzip.open(dst,'rt') as f:sql=f.read()
                     self.assertIn('SQL SECURITY INVOKER',sql);self.assertNotIn('DEFINER=',sql)
+
+    def test_healthcheck_rejects_redirects_and_errors(self):
+        config=json.loads(subprocess.check_output([sys.executable,str(ROOT/'scripts/cronfig-compose.py')]))
+        command=config['services']['web']['healthcheck']['test'][1].replace('$$','$')
+        for status in ['200','301','500']:
+            with self.subTest(status=status),tempfile.TemporaryDirectory() as tmp:
+                curl=Path(tmp)/'curl';curl.write_text('#!/bin/sh\nprintf '+status+'\n');curl.chmod(0o755)
+                result=subprocess.run(['sh','-c',command],env={**os.environ,'PATH':tmp+':'+os.environ['PATH']})
+                self.assertEqual(result.returncode,0 if status=='200' else 1)

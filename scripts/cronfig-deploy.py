@@ -44,13 +44,16 @@ server {{ listen 443 ssl; server_name m.cronfig.io; access_log /var/log/nginx/cr
         raise
 
 def healthy():
+    def http(path):
+        return capture(['docker','exec',container,'curl','-sS','--max-time','30','-H','Host: m.cronfig.io','-H','X-Forwarded-Proto: https','-o','/tmp/cronfig-health.html','-w','%{http_code}','http://127.0.0.1'+path])
     for _ in range(36):
-        r=subprocess.run(['docker','exec',container,'curl','-fsS','--max-time','10','-o','/tmp/cronfig-health.html','http://127.0.0.1/s/login'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
-        if r.returncode==0:break
+        try:
+            if http('/s/login')=='200':break
+        except subprocess.CalledProcessError:pass
         time.sleep(5)
-    else:raise RuntimeError('Cronfig login readiness failed')
+    else:raise RuntimeError('Cronfig login did not return HTTP 200')
     for path in ['/form/generate.js?id=1','/form/generate.js?id=9']:
-        run(['docker','exec',container,'curl','-fsS','--max-time','30','-o','/tmp/cronfig-form-check.js','http://127.0.0.1'+path])
+        if http(path)!='200':raise RuntimeError('Cronfig form did not return HTTP 200')
     version=capture(['docker','exec','-w','/var/www/html',container,'php','bin/console','--version'])
     if not version.startswith('Mautic 7.2.1'):raise RuntimeError('Unexpected application version')
     run(['curl','-fsS','--max-time','30','-o','/dev/null','https://m.veetr.com/s/login'])
@@ -99,19 +102,22 @@ if a.action=='stage':
 elif a.action=='activate':
     if not (root/'release').exists() or (root/'release').read_text().strip()!=a.release:raise SystemExit('Release ownership mismatch')
     shutil.copytree(repo/'deployment/cronfig',root/'runtime',dirs_exist_ok=True)
-    if (root/'activated.json').exists():raise SystemExit('Already activated; use verify')
+    if 'return 503;' not in Path('/etc/nginx/sites-available/m.cronfig.io').read_text():raise SystemExit('Hostname must be in maintenance before activation or retry')
     if not (root/'staged.json').exists():raise SystemExit('No verified stage')
     proof=json.loads((payload/'source-frozen.json').read_text())
     if proof.get('database_matches_rehearsal') is not True or proof.get('files_match_rehearsal') is not True:raise SystemExit('Final frozen source verification missing')
+    # Retry preserves the imported database; no data is restored or reimported.
+    shutil.copyfile(payload/'config/local.php',root/'config/local.php');run(['chown','33:33',str(root/'config/local.php')]);run(['chmod','640',str(root/'config/local.php')])
     # Outbound network is added while null mail and empty Cronfig keys remain active.
-    run(compose(True)+['up','-d']);healthy()
+    run(compose(True)+['up','-d','--force-recreate']);healthy()
     try:
         shutil.copyfile(payload/'local.live.php',root/'config/local.php');run(['chown','33:33',str(root/'config/local.php')]);run(['chmod','640',str(root/'config/local.php')])
         run(compose(True)+['up','-d','--force-recreate']);healthy()
         nginx(True)
         # From this point the new database may contain writes: never auto-restore it.
         (root/'activated.json').write_text(json.dumps({'release':a.release,'time':time.time()})+'\n')
-        run(['curl','-fsS','--resolve','m.cronfig.io:443:127.0.0.1','https://m.cronfig.io/s/login','-o','/dev/null'])
+        status=capture(['curl','-sS','--resolve','m.cronfig.io:443:127.0.0.1','https://m.cronfig.io/s/login','-o','/dev/null','-w','%{http_code}'])
+        if status!='200':raise RuntimeError('Public HTTPS proxy did not return HTTP 200')
     except Exception:
         nginx(False)
         raise
