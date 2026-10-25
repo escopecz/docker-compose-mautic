@@ -1,0 +1,6 @@
+{
+  "instances": [
+    {"name": "marketing", "domain": "marketing.example.com", "port": 8001, "trusted_proxies": []},
+    {"name": "sales", "domain": "sales.example.com", "port": 8002, "trusted_proxies": []}
+  ]
+}

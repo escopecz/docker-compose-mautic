@@ -1,66 +1,74 @@
-# Deploy Mautic 6 to DigitalOcean with GitHub Actions
+# Self-host Mautic 7 with Docker Compose
 
-> **⚡ This repository uses the [Deploy Mautic to DigitalOcean](https://github.com/marketplace/actions/deploy-mautic-to-digitalocean) GitHub Action for one-click deployments.**
+A working example for running multiple Mautic instances on one server. It uses Mautic **7.2.1** with PHP **8.3.36** and a shared MySQL **8.4** service. Each instance gets its own database user, schema, internal database network, configuration and media volumes. All instances share one application image.
 
-Automated deployment of Mautic 6 to DigitalOcean VPS using GitHub Actions. Deploy Mautic in minutes with automatic SSL certificates, monitoring, and maintenance.
+The sample names `marketing` and `sales` and all `example.com` domains are placeholders. There are no production hostnames, SSH keys, provider tokens or automatic deployments. CI validates the example; pushing or merging changes never connects to a server.
 
-## 🎥 Mautic Conference Global 2024 
+## Install
 
-My presentation of the previous version of this idea. It's way simpler now as I moved the complexities to a GitHub action.
+Use a Linux server with Docker Engine, Docker Compose v2, Python 3.11+ and a host reverse proxy such as nginx. The pinned Mautic image is amd64; ARM machines need emulation. Start with at least 4 GB RAM for two instances and the image build, then size for your workload. Build on a separate machine and transfer the image if the server has limited RAM.
 
-[![Docker Compose for Mautic introduced in the Mautic Conference Global 2024](https://github.com/user-attachments/assets/7841185f-5137-4130-9f23-6871606f4c7d)](https://www.youtube.com/watch?v=lzyjbUKZZlY)
+```sh
+cp instances.example.json instances.json
+# Edit the names, domains and unused loopback ports before proceeding.
+python3 scripts/render.py --init-secrets
+# Build once, including the GrapesJS editor assets absent from the upstream image.
+docker build --platform linux/amd64 -t mautic-example:7.2.1 .
+docker compose -f compose.json up -d
+```
 
-## 🚀 Quick Start
+Generated passwords stay in ignored, owner-only `secrets/` files. Save them securely with your backups. Running the renderer again does not rotate passwords. MySQL creates the users only on its first startup with an empty volume. Adding/renaming instances later requires deliberate database/user provisioning; do not delete the database volume to rerun initialization.
 
-### 1. Fork this Repository
-Click the "Fork" button to create your own copy.
+Only web services start by default. Each listens on `127.0.0.1`; MySQL has no published port. Complete the installation wizard through an SSH tunnel **before exposing a hostname publicly**:
 
-### 2. Setup Instructions
-**Complete setup guide**: https://github.com/marketplace/actions/deploy-mautic-to-digitalocean
+```sh
+ssh -L 8001:127.0.0.1:8001 -L 8002:127.0.0.1:8002 user@your-server
+```
 
-The action's documentation covers:
-- Prerequisites and requirements
-- GitHub Secrets and Variables configuration  
-- DigitalOcean API token setup
-- SSH key generation and setup
-- Domain configuration for SSL
-- VPS sizing recommendations
-- Troubleshooting common issues
+Open `http://localhost:8001` and `http://localhost:8002`, create each administrator, then configure your real HTTPS site URL. Email initially uses a null transport; configure and test your own SMTP provider in Mautic before enabling campaigns or jobs.
 
-### 3. Deploy Mautic
+## HTTPS and jobs
 
-#### Automatic Deployment
-Push to `main` branch and deployment runs automatically.
+Adapt `nginx.example.conf` for each hostname and obtain certificates with your ACME client. The example overwrites forwarded headers instead of trusting values supplied by visitors. For HTTPS detection behind nginx, set `trusted_proxies` in the instance's persisted `config/local.php` to the exact Docker bridge gateway address through which nginx reaches that web container. For a fresh installation you can set the same addresses in `instances.json` before startup. Inspect them using `docker network inspect`; do not trust all IPs or use `REMOTE_ADDR`.
 
-#### Manual Deployment
-1. Go to `Actions` tab → "Deploy Mautic to DigitalOcean"
-2. Click "Run workflow" 
-3. Choose VPS name and size
-4. Deploy!
+Reload nginx only after its configuration passes `nginx -t`. Point your DNS to your own server. Keep Docker backend ports bound to loopback. Restrict SSH and host firewall access appropriately. Logs can still contain personal data and error details; restrict and rotate them, and never publish them as CI artifacts.
 
-## ✨ Features
+After installation and SMTP validation, enable the instance's cron and queue consumer explicitly:
 
-- **🚀 One-click deployment** - Deploy in under 10 minutes
-- **🔒 Automatic SSL** - Let's Encrypt certificates with domain setup
-- **📊 Built-in monitoring** - DigitalOcean monitoring + Docker health checks
-- **🔄 Easy updates** - Update Mautic version and redeploy
-- **🎨 Extensible** - Custom themes and plugins via Composer
-- **👥 Team-friendly** - GitHub collaboration and audit trail
+```sh
+docker compose -f compose.json --profile jobs up -d marketing-cron marketing-worker
+# Repeat for sales when ready.
+```
 
-## 🔗 Resources
+The official image's cron schedule and queue worker are used. If an external scheduler already runs these commands, leave local cron disabled to avoid duplicate jobs. Keep the worker enabled when using Doctrine queues unless another consumer handles them.
 
-- **📖 Complete Documentation**: https://github.com/marketplace/actions/deploy-mautic-to-digitalocean
-- **🛠️ Action Source Code**: https://github.com/escopecz/mautic-do-action
-- **📋 Migration Guide**: [MIGRATION-TO-ACTION.md](MIGRATION-TO-ACTION.md)
-- **🔍 Validation Report**: [VALIDATION-SUMMARY.md](VALIDATION-SUMMARY.md)
+## Backups and restore rehearsal
 
-## 💬 Support
+```sh
+python3 scripts/backup.py backup marketing
+python3 scripts/backup.py rehearse marketing --directory backups/marketing/TIMESTAMP
+```
 
-- **Mautic Community**: https://www.mautic.org/community
-- **Action Issues**: https://github.com/escopecz/mautic-do-action/issues
-- **DigitalOcean Support**: https://www.digitalocean.com/support
+Backup briefly stops only that instance's running web/cron/worker services, dumps its schema, archives its configuration/media, checks archive integrity and restarts the same services. Schedule this command using your host's scheduler. Backups are private, unencrypted files: retain an encrypted off-server copy and manage retention according to your policy. They contain database credentials and customer data.
 
----
+Rehearsal checks the manifest, restores SQL into a disposable MySQL container with **no network access**, and verifies the scheduler is **DISABLED** before importing. MySQL local shell commands and local file loading are disabled during imports. No web, email, cron or queue worker runs; the scratch container and its anonymous volume are removed afterwards. This proves database restoreability, not application compatibility or a complete disaster recovery test. Test application restoration separately before relying on a recovery plan.
 
-**Prefer managed hosting?** Consider [Mautic's official partners](https://www.mautic.org/mautic-partners) or start a [free trial](https://m.mautic.org/mautic-start-your-trial).
+There is intentionally no automatic production restore. For recovery, stop the selected instance's writers, preserve its current data, verify a backup, restore the configuration/media and import SQL with the supplied binary-mode client into a clean matching schema. Never restore over live writes. Keep the exact application image identified in the manifest and the secret files alongside your recovery material.
 
+## Updates and migrations
+
+Application startup does **not** run database migrations. Back up and rehearse first, build a reviewed new image, stop the selected instance's writers and run the version-appropriate Mautic migration commands explicitly before reopening traffic. Runtime images are pinned; periodically review upstream security releases and update the pins. Do not assume an old digest gets security fixes automatically.
+
+Do not mount a persistent volume over all of `/var/www/html`: it would hide updated application code. Custom plugins/themes belong in a reviewed derived image. Persistent configuration/media/logs are shared only between the roles of the same instance.
+
+This is a fresh Mautic 7 hosting example, not an unattended Mautic 4/5/6 upgrader. Existing installations must follow the supported major-version migration path and validate their plugins, themes, schema and data before cutover. Avoid `docker compose down -v` on live installations: it deletes persistent data for every instance in that project.
+
+## Validation
+
+```sh
+python3 -m unittest discover -s tests -v
+docker compose -f compose.json --profile jobs config --quiet
+python3 tests/integration.py
+```
+
+The integration test creates only disposable test resources with random names and dummy credentials. It checks per-schema access (including GRANT wildcard protection), blocked MySQL shell commands, disabled database events, secret-free process arguments, installation, editor assets, background jobs and a database backup/restore cycle. It does not read your instance secrets or connect to an existing server.
