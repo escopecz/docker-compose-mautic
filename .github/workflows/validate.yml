@@ -1,0 +1,26 @@
+name: Validate self-hosting example
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - run: python3 -m unittest discover -s tests -v
+      - run: |
+          cp instances.example.json instances.json
+          python3 scripts/render.py --init-secrets
+          docker compose -f compose.json --profile jobs config --quiet
+          for script in runtime/*.sh; do bash -n "$script"; done
+      - name: Build the shared Mautic image
+        run: docker build -t mautic-example:7.2.1 .
+      - name: Exercise isolated database security boundaries
+        run: python3 tests/integration.py

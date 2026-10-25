@@ -1,0 +1,13 @@
+instances.json
+compose.json
+secrets/
+backups/
+.env
+.env.*
+__pycache__/
+*.sql
+*.sql.gz
+*.tar
+*.tar.gz
+*.pem
+*.key
