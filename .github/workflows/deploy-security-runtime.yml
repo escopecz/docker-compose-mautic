@@ -1,0 +1,52 @@
+name: Deploy verified PHP security runtimes
+on:
+  push:
+    branches: [codex/deploy-php-20261119]
+permissions:
+  actions: read
+  contents: read
+concurrency: php-security-deployment
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Retrieve verified builds
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for app in grav mautic; do
+            gh run download 44718024708 --repo "$GITHUB_REPOSITORY" -n "runtime-$app" -D "$app"
+            (cd "$app" && sha256sum -c SHA256SUMS)
+          done
+      - name: Connect to the verified deployment host
+        env:
+          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          HOST: ${{ vars.PHP_MAINT_HOST }}
+          HOST_KEY: ${{ vars.PHP_MAINT_HOST_KEY }}
+        run: |
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy
+          printf '%s %s\n' "$HOST" "$HOST_KEY" > ~/.ssh/known_hosts
+          printf 'Host deployment\n  HostName %s\n  User root\n  IdentityFile ~/.ssh/deploy\n  IdentitiesOnly yes\n  StrictHostKeyChecking yes\n  BatchMode yes\n' "$HOST" > ~/.ssh/config
+          ssh deployment true
+      - name: Record the account inventory privately on the host
+        continue-on-error: true
+        env:
+          DO_TOKEN: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          umask 077
+          url='https://api.digitalocean.com/v2/droplets?per_page=200'
+          while test -n "$url"; do
+            [[ "$url" == https://api.digitalocean.com/v2/droplets\?* ]]
+            curl -fsS -H "Authorization: Bearer $DO_TOKEN" "$url" > page
+            jq -c '.droplets[] | {id,name,status,ipv4:[.networks.v4[]|select(.type=="public").ip_address]}' page >> inventory
+            url=$(jq -r '.links.pages.next // empty' page)
+          done
+          ssh deployment 'umask 077; cat > /root/php-maintenance-20261120/inventory.jsonl' < inventory
+      - name: Deploy with backups and per-project verification
+        run: |
+          set -euo pipefail
+          tar -cf - grav mautic | ssh deployment 'set -eu; umask 077; cd /root/php-maintenance-20261120; tar -xf -; flock -n .rollout.lock ./rollout > rollout.log 2>&1'
