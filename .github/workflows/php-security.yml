@@ -1,0 +1,48 @@
+name: Build November PHP security runtimes
+on:
+  push:
+    branches: [codex/php-security-20261119]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: mautic
+            version: 8.3.37
+            php: php@sha256:d60f7be79a869deb1562b6ecb2f555bccb65c8dd4af930b50ae4d14d4bd4696c
+            base: mautic/mautic@sha256:2d249853dc475ce0b0c2415d09dc43657496047c21b5bfb0a383415673ebf54b
+          - app: grav
+            version: 8.5.13
+            php: php@sha256:ec28324630bc77e2687a96216b4839ecbf7dbcfa686628521c23e0a0844d789d
+            base: getgrav/grav@sha256:3c0de5b5377e4350d5efe16157245d2780b47d3f40b8a3e34ae80afe0b39dd2c
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - env:
+          APP: ${{ matrix.app }}
+          TARGET: ${{ matrix.version }}
+          PHP_IMAGE: ${{ matrix.php }}
+          BASE: ${{ matrix.base }}
+        run: |
+          set -euo pipefail
+          mkdir out
+          docker buildx build --build-arg APP="$APP" --build-arg PHP_IMAGE="$PHP_IMAGE" --output type=tar,dest=out/runtime.tar security-runtime
+          gzip out/runtime.tar
+          printf 'FROM %s\nADD runtime.tar.gz /\nENV PHP_VERSION=%s\n' "$BASE" "$TARGET" > out/Dockerfile
+          docker build -t candidate out
+          docker run --rm --entrypoint php "$BASE" -m | sort > before
+          docker run --rm --entrypoint php candidate -m | sort > after
+          diff -u before after
+          test "$(docker run --rm --entrypoint php candidate -r 'echo PHP_VERSION;')" = "$TARGET"
+          docker run --rm --entrypoint apache2ctl candidate -t
+          cd out && sha256sum Dockerfile runtime.tar.gz > SHA256SUMS
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: runtime-${{ matrix.app }}
+          path: out/
+          retention-days: 3
