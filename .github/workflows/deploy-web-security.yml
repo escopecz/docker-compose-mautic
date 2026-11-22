@@ -1,0 +1,35 @@
+name: Deploy Mautic 7.2.2 and Apache security updates
+on:
+  push:
+    branches: [codex/deploy-web-20261122]
+permissions:
+  actions: read
+  contents: read
+concurrency: php-security-deployment
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Retrieve verified builds
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh run download 45035947671 --repo "$GITHUB_REPOSITORY" -n mautic-release-update -D update
+          (cd update && sha256sum -c SHA256SUMS)
+      - name: Connect to the verified deployment host
+        env:
+          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          HOST: ${{ vars.PHP_MAINT_HOST }}
+          HOST_KEY: ${{ vars.PHP_MAINT_HOST_KEY }}
+        run: |
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy
+          printf '%s %s\n' "$HOST" "$HOST_KEY" > ~/.ssh/known_hosts
+          printf 'Host deployment\n  HostName %s\n  User root\n  IdentityFile ~/.ssh/deploy\n  IdentitiesOnly yes\n  StrictHostKeyChecking yes\n  BatchMode yes\n' "$HOST" > ~/.ssh/config
+          ssh deployment true
+      - name: Deploy the verified updates
+        run: |
+          set -euo pipefail
+          tar cf - update | ssh deployment 'set -eu; umask 077; cd /root/web-maintenance-20261122; tar xf -; flock -n .lock python3 deploy.py > deploy.log 2>&1'
