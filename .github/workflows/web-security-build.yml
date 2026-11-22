@@ -1,0 +1,44 @@
+name: Prepare Mautic 7.2.2 application update
+on:
+  push:
+    branches: [codex/web-security-20261122]
+permissions:
+  contents: read
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Compare the official release images
+        run: |
+          set -euo pipefail
+          mkdir -p old new update/files
+          for pair in old:2d249853dc475ce0b0c2415d09dc43657496047c21b5bfb0a383415673ebf54b new:cb5a72a63c855917c2c6eca65cd368b02d8d491bc135d3834e85ba5d575d789c; do
+            dir=${pair%%:*}
+            ref=mautic/mautic@sha256:${pair#*:}
+            docker pull "$ref"
+            id=$(docker create "$ref")
+            docker cp "$id:/var/www/html/." - | sudo tar -xf - -C "$dir"
+            docker rm "$id"
+          done
+          sudo rsync -aicn --delete --exclude='/var/' --exclude='/config/' --out-format='%i|%n' new/ old/ > changes
+          python3 - <<'PY'
+          from pathlib import Path
+          changes = Path('changes').read_text().splitlines()
+          deleted, updated = [], []
+          for line in changes:
+              state, name = line.split('|', 1)
+              if name in ('.','./') or name.endswith('/'): continue
+              if state.startswith('*deleting'): deleted.append(name)
+              elif state.startswith(('>f','cL','cf')) or (state.startswith('.f') and state[5]=='p'): updated.append(name)
+          Path('update/deleted').write_text(''.join(p+'\n' for p in deleted))
+          Path('updated').write_text(''.join(p+'\n' for p in updated))
+          print(len(updated), 'updated files;', len(deleted), 'obsolete files')
+          print('Migration changes:', [p for p in updated+deleted if 'migrations/' in p.lower() and 'version' in p.lower()][:80])
+          PY
+          sudo tar czf update/app.tgz -C new -T "$PWD/updated"
+          cd update && sha256sum app.tgz deleted > SHA256SUMS
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mautic-release-update
+          path: update/
+          retention-days: 7
